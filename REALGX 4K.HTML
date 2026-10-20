@@ -1,0 +1,2270 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>REALGX 4K v3.0 Ultra — Free 4K & Mobile Wallpapers Studio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        screens: {
+          'xs': '400px',
+          'sm': '640px',
+          'md': '768px',
+          'lg': '1024px',
+          'xl': '1280px',
+          '2xl': '1536px',
+        },
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            cyber: {
+              blue: '#00f0ff',
+              pink: '#ff007f',
+              purple: '#a855f7',
+              dark: '#070913',
+              card: '#0d1224',
+              border: '#1e2942',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #070913;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d1a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #334155;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .glow-cyan {
+      box-shadow: 0 0 25px -5px rgba(0, 240, 255, 0.35);
+    }
+    .glow-pink {
+      box-shadow: 0 0 25px -5px rgba(255, 0, 127, 0.35);
+    }
+    .glow-purple {
+      box-shadow: 0 0 25px -5px rgba(168, 85, 247, 0.35);
+    }
+    .glass-panel {
+      background: rgba(13, 18, 36, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: rgba(13, 18, 36, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(0, 240, 255, 0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 14px 30px -10px rgba(0, 240, 255, 0.2);
+    }
+    .monitor-frame {
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 40px rgba(0, 240, 255, 0.15);
+    }
+    .phone-frame {
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 30px rgba(255, 0, 127, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black">
+
+  <!-- Ambient background decorative gradient blurs -->
+  <div class="fixed top-0 left-1/4 w-72 sm:w-96 h-72 sm:h-96 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse"></div>
+  <div class="fixed bottom-1/4 right-1/4 w-72 sm:w-[30rem] h-72 sm:h-[30rem] bg-pink-600/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+  <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 sm:w-[40rem] h-80 sm:h-[40rem] bg-purple-600/5 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+
+  <!-- Main Navigation Header -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 min-h-[64px] py-2 flex items-center justify-between gap-2">
+      
+      <!-- Brand Logo & Title -->
+      <a href="#" class="flex items-center gap-2.5 sm:gap-3 group min-w-0 flex-shrink">
+        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-pink-500 p-0.5 shadow-lg shadow-cyan-500/25 flex items-center justify-center overflow-hidden flex-shrink-0 group-hover:scale-105 transition-transform">
+          <div class="w-full h-full bg-[#070913] rounded-[10px] flex items-center justify-center font-black text-cyan-400 text-xs sm:text-sm">RGX</div>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-1.5 sm:gap-2 flex-nowrap">
+            <span class="font-extrabold text-sm xs:text-base sm:text-lg tracking-tight text-white group-hover:text-cyan-300 transition-colors whitespace-nowrap">REALGX 4K</span>
+            <span class="px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 rounded-full whitespace-nowrap flex-shrink-0">v3.0 ULTRA</span>
+          </div>
+          <p class="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">Free Ultra HD Wallpapers & Studio</p>
+        </div>
+      </a>
+
+      <!-- Desktop & Laptop Quick Nav Links -->
+      <nav class="hidden lg:flex items-center gap-1.5 flex-shrink-0">
+        <a href="#gallery-section" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors">Gallery</a>
+        <a href="#categories-section" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors">Categories</a>
+        <a href="#upload-section" class="px-3 py-1.5 text-xs font-bold text-cyan-300 hover:text-cyan-200 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/40 rounded-lg transition-all flex items-center gap-1.5">
+          <span>⬆️</span> Upload Studio
+        </a>
+        <a href="#guide-section" class="px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg transition-colors">Setup Guide</a>
+        <button id="surprise-me-btn" class="px-3 py-1.5 text-xs font-semibold text-purple-300 hover:text-purple-200 hover:bg-purple-950/40 border border-purple-500/30 rounded-lg transition-all flex items-center gap-1.5">
+          <span>🎲</span> Surprise Me
+        </button>
+      </nav>
+
+      <!-- Right Action Items -->
+      <div class="flex items-center gap-2 flex-shrink-0">
+        <!-- Direct Jump to Custom Upload -->
+        <a href="#upload-section" class="lg:hidden p-2 text-cyan-400 bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/40 rounded-xl flex items-center justify-center" title="Upload Wallpaper">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </a>
+
+        <!-- Favorites Drawer Trigger -->
+        <button id="favorites-btn" class="relative px-2.5 py-2 sm:p-2.5 text-slate-300 hover:text-pink-400 hover:bg-pink-950/20 border border-slate-800 rounded-xl transition-all flex items-center gap-1.5" title="View Saved Wallpapers">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <span class="hidden sm:inline text-xs font-medium">Favorites</span>
+          <span id="fav-count-badge" class="px-1.5 py-0.5 text-[10px] font-bold bg-pink-500 text-white rounded-full min-w-[18px] text-center leading-none">0</span>
+        </button>
+
+        <div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-400 whitespace-nowrap">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span id="total-wallpapers-counter">Live Wallpaper Hub</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile & Tablet Scrollable Quick-Navigation Bar -->
+    <div class="lg:hidden border-t border-slate-800/70 bg-slate-950/60 px-3 py-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <a href="#gallery-section" class="px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-900/90 border border-slate-800 rounded-lg whitespace-nowrap">🖼️ Gallery</a>
+      <a href="#categories-section" class="px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-900/90 border border-slate-800 rounded-lg whitespace-nowrap">📁 Categories</a>
+      <a href="#upload-section" class="px-2.5 py-1 text-[11px] font-bold text-cyan-300 bg-cyan-950/50 border border-cyan-500/30 rounded-lg whitespace-nowrap">⬆️ Upload Studio</a>
+      <a href="#guide-section" class="px-2.5 py-1 text-[11px] font-semibold text-slate-300 hover:text-white bg-slate-900/90 border border-slate-800 rounded-lg whitespace-nowrap">📖 Setup Guide</a>
+      <button id="surprise-me-btn-mobile" class="px-2.5 py-1 text-[11px] font-semibold text-purple-300 bg-purple-950/40 border border-purple-500/30 rounded-lg whitespace-nowrap">🎲 Surprise Me</button>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="relative pt-6 sm:pt-10 pb-8 px-4 sm:px-6 lg:px-8 border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+        
+        <div class="lg:col-span-7">
+          <div class="inline-flex flex-wrap items-center gap-1.5 sm:gap-2 px-3 py-1.5 rounded-xl sm:rounded-full bg-gradient-to-r from-cyan-950/60 to-purple-950/60 border border-cyan-500/30 text-cyan-300 text-[11px] sm:text-xs font-semibold mb-4">
+            <span class="text-pink-400 whitespace-nowrap">🔥 MASSIVE UPDATE</span>
+            <span class="text-slate-500 hidden xs:inline">|</span>
+            <span class="text-cyan-200">24 New Studio Assets</span>
+          </div>
+
+          <h1 class="text-2xl xs:text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.15] mb-3 sm:mb-4">
+            Next-Gen <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-pink-400">4K & Mobile</span> Wallpapers Studio
+          </h1>
+
+          <p class="text-slate-300 text-xs sm:text-base leading-relaxed mb-5 sm:mb-6 max-w-2xl">
+            Immerse your battlestation and mobile screen in ultra-high-definition wallpapers. Upload your own custom wallpapers with titles, test them in live device mockups, fine-tune colors, and download in lossless 4K.
+          </p>
+
+          <!-- Search Bar -->
+          <div class="relative max-w-xl mb-4">
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <input type="text" id="search-input" placeholder="Search by title, tag (Cars, Anime, Space, OLED)..." class="w-full pl-10 pr-16 sm:pr-24 py-3 bg-slate-900/90 border border-slate-700/80 rounded-xl text-white placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all shadow-inner">
+            <div class="absolute inset-y-0 right-2 flex items-center gap-1">
+              <button id="clear-search-btn" class="hidden px-2 py-1 text-xs text-slate-400 hover:text-white">Clear</button>
+            </div>
+          </div>
+
+          <!-- Trending Tag Pills -->
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <span class="text-slate-500 font-semibold mr-1">Trending:</span>
+            <button class="trend-tag px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-colors border border-slate-700/60" data-tag="Cars">🏎️ Supercars</button>
+            <button class="trend-tag px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-colors border border-slate-700/60" data-tag="Anime">🗡️ Anime</button>
+            <button class="trend-tag px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-colors border border-slate-700/60" data-tag="Space">🚀 Space</button>
+            <button class="trend-tag px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-colors border border-slate-700/60" data-tag="Nature">🌲 Nature</button>
+            <button class="trend-tag px-2.5 py-1 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-full transition-colors border border-slate-700/60" data-tag="Cyberpunk">⚡ Cyberpunk</button>
+          </div>
+        </div>
+
+        <!-- Hero Right: Spotlight "Wallpaper of the Day" -->
+        <div class="lg:col-span-5">
+          <div class="relative glass-card rounded-2xl p-2.5 sm:p-3 overflow-hidden border border-cyan-500/30 glow-cyan">
+            <div class="relative aspect-[16/10] sm:aspect-[16/9] rounded-xl overflow-hidden bg-slate-950 group">
+              <img id="spotlight-img" src="" alt="Featured Wallpaper" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-transparent"></div>
+              
+              <div class="absolute top-2.5 left-2.5 right-2.5 flex flex-wrap items-center gap-1.5">
+                <span class="px-2.5 py-0.5 text-[10px] font-black bg-pink-600 text-white rounded-full tracking-wider uppercase shadow-md whitespace-nowrap">★ TOP SPOTLIGHT</span>
+                <span id="spotlight-aspect-badge" class="px-2 py-0.5 text-[10px] font-bold bg-slate-900/80 backdrop-blur text-cyan-400 border border-cyan-500/30 rounded-full whitespace-nowrap">16:9 4K</span>
+              </div>
+
+              <div class="absolute bottom-2.5 left-2.5 right-2.5 flex flex-col xs:flex-row xs:items-end justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <h3 id="spotlight-title" class="font-bold text-sm sm:text-base text-white truncate drop-shadow-md">Loading...</h3>
+                  <p id="spotlight-category" class="text-[11px] sm:text-xs text-cyan-300 font-medium truncate">Cars & Supercars</p>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <button id="spotlight-open-btn" class="flex-1 xs:flex-initial justify-center px-3 py-1.5 text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-black rounded-lg transition-all shadow-lg shadow-cyan-500/30 flex items-center gap-1 whitespace-nowrap">
+                    <span>Studio View</span>
+                  </button>
+                  <button id="spotlight-dl-btn" class="p-1.5 bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700 rounded-lg transition-all flex-shrink-0" title="Direct Download">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-2.5 px-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+              <span id="spotlight-stats">42,150 downloads</span>
+              <span class="text-emerald-400 font-semibold flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Lossless 4K Format
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================================= -->
+  <!-- CUSTOM WALLPAPER UPLOAD STUDIO -->
+  <!-- ========================================================================= -->
+  <section id="upload-section" class="py-8 px-4 sm:px-6 lg:px-8 border-b border-slate-800/80 bg-gradient-to-b from-slate-950/70 to-slate-900/40 relative">
+    <div class="max-w-7xl mx-auto">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-6">
+        <div>
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+            <span>✨</span> Creator Studio
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            Upload Your Custom Wallpapers
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Upload your own high-res images, set custom titles, assign categories, and publish them instantly to your website gallery.</p>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs self-start sm:self-auto">
+          <span class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-2 whitespace-nowrap">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span>Your Uploads: <strong id="user-upload-count" class="text-cyan-400">0</strong></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-2xl p-4 sm:p-7 border border-cyan-500/30 shadow-2xl relative overflow-hidden">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          
+          <div class="lg:col-span-6 flex flex-col justify-between space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center justify-between gap-2">
+                <span>1. Select or Drop Image</span>
+                <span class="text-[11px] text-cyan-400 lowercase font-normal">png, jpg, webp (up to 4K)</span>
+              </label>
+
+              <div id="upload-dropzone" class="border-2 border-dashed border-slate-700 hover:border-cyan-400/80 rounded-2xl p-4 sm:p-6 text-center cursor-pointer transition-all bg-slate-950/60 hover:bg-cyan-950/10 group flex flex-col items-center justify-center min-h-[180px] sm:min-h-[200px]">
+                <input type="file" id="custom-file-input" accept="image/*" class="hidden">
+                
+                <div id="dropzone-empty-view" class="space-y-3">
+                  <div class="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <svg class="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  </div>
+                  <div>
+                    <p class="text-xs sm:text-sm font-bold text-white group-hover:text-cyan-300 transition-colors">Click to Browse or Drag Image Here</p>
+                    <p class="text-[11px] sm:text-xs text-slate-400 mt-1">Supports high-res desktop & phone wallpaper photos</p>
+                  </div>
+                </div>
+
+                <div id="dropzone-preview-view" class="hidden w-full">
+                  <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden bg-slate-950 border border-slate-700">
+                    <img id="upload-live-preview" src="" alt="Live Preview" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+                    <span id="preview-dimensions-badge" class="absolute top-2 left-2 px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-900/90 text-cyan-400 border border-cyan-500/30 rounded-full">
+                      Ready
+                    </span>
+                    <button id="remove-preview-btn" type="button" class="absolute top-2 right-2 p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs" title="Remove image">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                  <p class="text-[11px] text-cyan-400 text-center mt-2 font-medium">✓ Image loaded! Click or drop another to replace.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-1">
+              <label for="custom-url-input" class="block text-[11px] font-semibold text-slate-400 mb-1">Or Paste Image URL directly:</label>
+              <div class="flex gap-2">
+                <input type="url" id="custom-url-input" placeholder="https://example.com/wallpaper.jpg" class="flex-1 min-w-0 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+                <button id="load-url-btn" type="button" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white rounded-xl transition-colors flex-shrink-0">
+                  Load
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="lg:col-span-6 space-y-4">
+            <div>
+              <label for="custom-title-input" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between gap-2">
+                <span>2. Wallpaper Title <span class="text-pink-500">*</span></span>
+                <span class="text-[11px] text-slate-500 font-normal">What you want to name it</span>
+              </label>
+              <input type="text" id="custom-title-input" placeholder="e.g. Nissan GT-R R34 Midnight Purple..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 transition-all font-medium">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="custom-category-select" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Category
+                </label>
+                <select id="custom-category-select" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-400">
+                  <option value="Cars">🏎️ Supercars & Cars</option>
+                  <option value="Anime">🗡️ Anime & Fantasy</option>
+                  <option value="JDM">🌸 JDM Drift</option>
+                  <option value="Cyberpunk">⚡ Cyberpunk & Neon</option>
+                  <option value="OLED">🖤 Deep Black OLED</option>
+                  <option value="Nature">🌲 Landscapes & Nature</option>
+                  <option value="Sci-Fi">🚀 Sci-Fi & Space</option>
+                  <option value="Custom">✨ Custom Community</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                  Device Orientation
+                </label>
+                <div class="grid grid-cols-3 gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl" id="custom-aspect-group">
+                  <button type="button" class="custom-aspect-btn py-1.5 text-[11px] font-bold rounded-lg bg-cyan-500 text-black transition-all" data-aspect="16:9">
+                    16:9 PC
+                  </button>
+                  <button type="button" class="custom-aspect-btn py-1.5 text-[11px] font-bold rounded-lg text-slate-400 hover:text-white transition-all" data-aspect="9:16">
+                    9:16 Phone
+                  </button>
+                  <button type="button" class="custom-aspect-btn py-1.5 text-[11px] font-bold rounded-lg text-slate-400 hover:text-white transition-all" data-aspect="21:9">
+                    21:9 Wide
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="custom-tags-input" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Tags <span class="text-[11px] text-slate-500 lowercase font-normal">(comma-separated)</span>
+              </label>
+              <input type="text" id="custom-tags-input" placeholder="e.g. 4K, JDM, Night, Custom, Wallpaper" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div>
+              <label for="custom-desc-input" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+                Description / Story <span class="text-[11px] text-slate-500 lowercase font-normal">(optional)</span>
+              </label>
+              <textarea id="custom-desc-input" rows="2" placeholder="Tell viewers about this wallpaper, setup details, or prompt..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 resize-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex flex-col xs:flex-row items-stretch xs:items-center gap-2.5 sm:gap-3">
+              <button id="publish-wallpaper-btn" type="button" class="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-pink-500 text-black font-extrabold text-xs sm:text-sm tracking-wide shadow-lg shadow-cyan-500/25 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                <span>Publish to Website Gallery</span>
+              </button>
+
+              <button id="reset-upload-btn" type="button" class="py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-700 text-xs font-bold transition-colors">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories & Controls Section -->
+  <section id="categories-section" class="py-6 px-4 sm:px-6 lg:px-8 border-b border-slate-800/80 bg-slate-950/40">
+    <div class="max-w-7xl mx-auto space-y-4">
+      <div class="flex items-center justify-between gap-4">
+        <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+          <span>📁</span> Browse Categories
+        </h2>
+        <div id="results-count" class="text-xs font-medium text-slate-400">
+          Showing Wallpapers
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar" id="category-pills-container">
+        <!-- Injected by JS -->
+      </div>
+
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2">
+        <div class="grid grid-cols-2 sm:inline-flex p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1" id="aspect-tabs">
+          <button class="aspect-tab px-3 py-1.5 text-xs font-semibold rounded-lg transition-all active-aspect bg-cyan-500 text-black shadow-sm text-center whitespace-nowrap" data-aspect="all">
+            All Devices
+          </button>
+          <button class="aspect-tab px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all text-center whitespace-nowrap" data-aspect="16:9">
+            🖥️ Desktop (16:9)
+          </button>
+          <button class="aspect-tab px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all text-center whitespace-nowrap" data-aspect="9:16">
+            📱 Mobile (9:16)
+          </button>
+          <button class="aspect-tab px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all text-center whitespace-nowrap" data-aspect="21:9">
+            🖥️ 21:9 Ultra-Wide
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between md:justify-end gap-2">
+          <label for="sort-select" class="text-xs text-slate-400 font-medium">Sort by:</label>
+          <select id="sort-select" class="flex-1 sm:flex-initial bg-slate-900 border border-slate-800 text-slate-300 text-xs font-medium rounded-xl px-3 py-2 focus:outline-none focus:border-cyan-400 transition-colors">
+            <option value="newest">Featured & Newest</option>
+            <option value="downloads">Most Popular</option>
+            <option value="title">Alphabetical (A-Z)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Wallpapers Gallery Grid -->
+  <main id="gallery-section" class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div id="active-filter-banner" class="hidden mb-6 p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex flex-wrap items-center justify-between gap-2 text-xs text-cyan-300">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="flex-shrink-0">🔍 Filtering by:</span>
+        <span id="active-filter-text" class="font-bold text-white truncate"></span>
+      </div>
+      <button id="reset-all-filters" class="underline hover:text-white font-semibold flex-shrink-0">Reset Filters</button>
+    </div>
+
+    <div id="empty-state" class="hidden py-16 text-center space-y-4">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-3xl">
+        🔍
+      </div>
+      <h3 class="text-lg font-bold text-white">No wallpapers found</h3>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-md mx-auto px-4">We couldn't find any wallpapers matching your search or filters. You can upload one in the Creator Studio above!</p>
+      <div class="flex flex-wrap justify-center gap-2 px-4">
+        <button id="empty-reset-btn" class="px-4 py-2 text-xs font-bold bg-cyan-500 text-black rounded-xl hover:bg-cyan-400 transition-colors">
+          Reset Filters
+        </button>
+        <a href="#upload-section" class="px-4 py-2 text-xs font-bold bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors">
+          Upload a Wallpaper
+        </a>
+      </div>
+    </div>
+
+    <div id="wallpapers-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+      <!-- Injected by JavaScript -->
+    </div>
+  </main>
+
+  <!-- Wallpaper Application Guide Section -->
+  <section id="guide-section" class="py-10 sm:py-12 px-4 sm:px-6 lg:px-8 border-t border-slate-800/80 bg-slate-950/60">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-6 sm:mb-8">
+        <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight mb-2">How to Apply 4K Wallpapers Without Quality Loss</h2>
+        <p class="text-xs sm:text-sm text-slate-400">Step-by-step instructions for Windows, macOS, iOS, and Android to ensure perfect pixel-to-pixel fidelity.</p>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-6" id="guide-tabs">
+        <button class="guide-tab p-3 rounded-xl border border-cyan-500/40 bg-cyan-950/30 text-white font-bold text-xs text-left transition-all active-guide" data-os="win">
+          <div class="text-lg mb-1">🪟</div>
+          Windows 11 / 10
+        </button>
+        <button class="guide-tab p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 font-bold text-xs text-left transition-all" data-os="mac">
+          <div class="text-lg mb-1">🍎</div>
+          macOS Sequoia / Sonoma
+        </button>
+        <button class="guide-tab p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 font-bold text-xs text-left transition-all" data-os="ios">
+          <div class="text-lg mb-1">📱</div>
+          iPhone / iOS
+        </button>
+        <button class="guide-tab p-3 rounded-xl border border-slate-800 bg-slate-900/60 text-slate-400 font-bold text-xs text-left transition-all" data-os="android">
+          <div class="text-lg mb-1">🤖</div>
+          Android 14 / 15
+        </button>
+      </div>
+
+      <div id="guide-content" class="p-4 sm:p-6 rounded-2xl glass-panel text-xs sm:text-sm text-slate-300 leading-relaxed border border-slate-800 space-y-3">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 px-4 sm:px-6 lg:px-8 border-t border-slate-800 text-center text-xs text-slate-500 space-y-3">
+    <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+      <div class="w-7 h-7 rounded-lg overflow-hidden bg-gradient-to-tr from-cyan-500 to-pink-500 p-0.5 inline-block flex-shrink-0">
+        <div class="w-full h-full bg-[#070913] rounded-[4px] flex items-center justify-center font-black text-cyan-400 text-[8px]">RGX</div>
+      </div>
+      <span class="font-bold text-slate-300 text-sm">REALGX 4K</span>
+      <span>•</span>
+      <span>Studio v3.0 Ultra</span>
+      <span>•</span>
+      <span>100% Free Creative Commons</span>
+    </div>
+    <p class="max-w-xl mx-auto">Engineered for gamers, designers, car enthusiasts, and anime fans worldwide. All wallpapers rendered in lossless uncompressed format.</p>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: INTERACTIVE STUDIO & MOCKUP PREVIEW MODAL -->
+  <!-- ========================================================================= -->
+  <div id="studio-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div class="relative w-full max-w-6xl max-h-[94vh] glass-panel rounded-2xl border border-cyan-500/40 shadow-2xl overflow-hidden flex flex-col my-auto">
+      
+      <div class="px-4 sm:px-5 py-3 border-b border-slate-800 flex items-center justify-between gap-2 bg-slate-950/90 flex-shrink-0">
+        <div class="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex-shrink-0">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+          </div>
+          <div class="min-w-0">
+            <h3 id="modal-title" class="font-bold text-white text-sm sm:text-lg leading-tight truncate">Wallpaper Studio</h3>
+            <div class="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-400 truncate">
+              <span id="modal-category" class="text-cyan-400 font-semibold truncate">Supercars & Cars</span>
+              <span>•</span>
+              <span id="modal-res-badge" class="whitespace-nowrap">3840 x 2160 UHD</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+          <button id="modal-fav-toggle" class="p-2 text-slate-400 hover:text-pink-500 rounded-lg hover:bg-slate-800 transition-colors" title="Toggle Favorite">
+            <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </button>
+          <button id="close-modal-btn" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
+        
+        <div class="lg:col-span-7 p-4 sm:p-6 flex flex-col justify-between bg-slate-950/50">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Device Mockup:</span>
+            <div class="grid grid-cols-2 sm:inline-flex p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1" id="device-mockup-tabs">
+              <button class="mockup-tab px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-cyan-500 text-black active-mockup text-center whitespace-nowrap" data-frame="clean">
+                🖼️ Master View
+              </button>
+              <button class="mockup-tab px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white text-center whitespace-nowrap" data-frame="monitor">
+                🖥️ Gaming PC
+              </button>
+              <button class="mockup-tab px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white text-center whitespace-nowrap" data-frame="phone">
+                📱 OLED Phone
+              </button>
+              <button class="mockup-tab px-2.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white text-center whitespace-nowrap" data-frame="ultrawide">
+                🖥️ 21:9 Curved
+              </button>
+            </div>
+          </div>
+
+          <div id="mockup-viewport" class="flex-1 min-h-[240px] sm:min-h-[360px] flex items-center justify-center relative p-2 overflow-hidden">
+            <!-- Dynamic device container populated by JS -->
+          </div>
+
+          <div class="mt-4 pt-3 border-t border-slate-800/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Dominant Palette (Click to Copy):</span>
+              <span class="text-[10px] text-slate-500">1-Click HEX</span>
+            </div>
+            <div id="modal-palette-container" class="flex flex-wrap items-center gap-2">
+              <!-- Swatches injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-5 p-4 sm:p-6 space-y-5 sm:space-y-6 bg-slate-900/60">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-black text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🎛️</span> Color & Lighting Tuning
+              </h4>
+              <button id="reset-tuning-btn" class="text-[11px] text-slate-400 hover:text-white underline">Reset Default</button>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>☀️ Brightness</span>
+                  <span id="val-brightness" class="font-mono text-cyan-400">100%</span>
+                </div>
+                <input type="range" id="slider-brightness" min="60" max="140" value="100" class="w-full accent-cyan-400">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>🌓 Contrast</span>
+                  <span id="val-contrast" class="font-mono text-cyan-400">100%</span>
+                </div>
+                <input type="range" id="slider-contrast" min="70" max="140" value="100" class="w-full accent-cyan-400">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>🎨 Saturation (Vibrancy)</span>
+                  <span id="val-saturation" class="font-mono text-cyan-400">100%</span>
+                </div>
+                <input type="range" id="slider-saturation" min="0" max="200" value="100" class="w-full accent-cyan-400">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>🌈 Hue Shift</span>
+                  <span id="val-hue" class="font-mono text-cyan-400">0°</span>
+                </div>
+                <input type="range" id="slider-hue" min="-180" max="180" value="0" class="w-full accent-purple-400">
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>💧 Soft Ambient Blur</span>
+                  <span id="val-blur" class="font-mono text-cyan-400">0px</span>
+                </div>
+                <input type="range" id="slider-blur" min="0" max="8" value="0" step="0.5" class="w-full accent-cyan-400">
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-3 pt-3 border-t border-slate-800">
+            <h4 class="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+              <span>⬇️</span> Export Resolution
+            </h4>
+
+            <div class="grid grid-cols-2 gap-2" id="res-options-container">
+              <button class="res-btn p-2.5 rounded-xl border border-cyan-500/40 bg-cyan-950/40 text-left hover:border-cyan-400 transition-all active-res" data-w="3840" data-h="2160" data-label="4K UHD (3840×2160)">
+                <div class="font-bold text-xs text-white">4K Ultra HD</div>
+                <div class="text-[10px] text-cyan-400">3840 × 2160 (16:9)</div>
+              </button>
+              <button class="res-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-left hover:border-slate-700 transition-all" data-w="2560" data-h="1440" data-label="2K QHD (2560×1440)">
+                <div class="font-bold text-xs text-white">2K Quad HD</div>
+                <div class="text-[10px] text-slate-400">2560 × 1440 (16:9)</div>
+              </button>
+              <button class="res-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-left hover:border-slate-700 transition-all" data-w="2160" data-h="3840" data-label="4K Mobile (2160×3840)">
+                <div class="font-bold text-xs text-white">4K Mobile OLED</div>
+                <div class="text-[10px] text-slate-400">2160 × 3840 (9:16)</div>
+              </button>
+              <button class="res-btn p-2.5 rounded-xl border border-slate-800 bg-slate-900/60 text-left hover:border-slate-700 transition-all" data-w="3440" data-h="1440" data-label="Ultra-Wide (3440×1440)">
+                <div class="font-bold text-xs text-white">21:9 Ultra-Wide</div>
+                <div class="text-[10px] text-slate-400">3440 × 1440 (21:9)</div>
+              </button>
+            </div>
+
+            <button id="modal-download-execute" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-pink-500 text-black font-extrabold text-xs sm:text-sm tracking-wide shadow-lg shadow-cyan-500/20 hover:brightness-110 active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+              <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              <span id="dl-button-label">Download 4K Ultra HD</span>
+            </button>
+            
+            <p class="text-[11px] text-slate-400 text-center">Renders full resolution with your custom color adjustments applied.</p>
+          </div>
+
+          <div class="space-y-2 pt-3 border-t border-slate-800 text-xs">
+            <p id="modal-desc" class="text-slate-300 leading-relaxed"></p>
+            <div id="modal-tags" class="flex flex-wrap gap-1 pt-1">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: SAVED FAVORITES DRAWER -->
+  <!-- ========================================================================= -->
+  <div id="favorites-drawer" class="fixed inset-0 z-50 hidden flex justify-end bg-black/70 backdrop-blur-sm">
+    <div class="w-full max-w-md h-full bg-[#0d1224] border-l border-slate-800 flex flex-col shadow-2xl p-4 sm:p-6 overflow-hidden">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-pink-500 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          <h3 class="font-bold text-white text-base">Your Saved Favorites</h3>
+        </div>
+        <button id="close-favorites-btn" class="p-1 text-slate-400 hover:text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <div id="favorites-list-container" class="flex-1 overflow-y-auto py-4 space-y-3">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
+        <button id="clear-all-favs-btn" class="text-xs text-red-400 hover:text-red-300 font-medium">Clear All</button>
+        <button id="close-drawer-done-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col items-end gap-2 pointer-events-none"></div>
+
+  <canvas id="export-canvas" class="hidden"></canvas>
+
+  <script>
+    // MASSIVELY EXPANDED STOCK WALLPAPERS (24 4K Images)
+    let BASE_WALLPAPERS = [
+      // CATEGORY: CARS
+      {
+        "id": "apex-cyber-hypercar",
+        "title": "Apex Cyber Hypercar 2099",
+        "category": "Cars",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Cars", "Hypercar", "Cyberpunk", "Speed", "Neon", "4K HDR"],
+        "colors": ["#00f0ff", "#ff007f", "#080c18"],
+        "downloads": "89,420",
+        "description": "Sleek aerodynamic hypercar tearing through a rain-drenched neon metropolis with laser taillight streaks.",
+        "data_uri": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "midnight-jdm-spirit",
+        "title": "Midnight JDM Horizon Drift",
+        "category": "Cars",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Cars", "JDM", "Tokyo", "Sakura", "Drift", "Night"],
+        "colors": ["#f472b6", "#fbbf24", "#111827"],
+        "downloads": "72,150",
+        "description": "Custom widebody Japanese street coupe parked under glowing paper lanterns and wet asphalt reflections.",
+        "data_uri": "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "desert-exotic-sunset",
+        "title": "Sunburst Exotic Horizon Pass",
+        "category": "Cars",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Cars", "Supercar", "Sunset", "Golden Hour", "Desert", "Scenic"],
+        "colors": ["#f97316", "#eab308", "#1c1917"],
+        "downloads": "55,740",
+        "description": "Aerodynamic sculpted hypercar speeding down a high-desert coastal canyon highway at golden hour.",
+        "data_uri": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "classic-porsche-neon",
+        "title": "Classic 911 Neon District",
+        "category": "Cars",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Cars", "Porsche", "Retro", "Neon", "Night", "City"],
+        "colors": ["#ec4899", "#8b5cf6", "#0f172a"],
+        "downloads": "63,220",
+        "description": "A classic air-cooled sports car bathed in intense pink and purple neon lights on a wet city street.",
+        "data_uri": "https://images.unsplash.com/photo-1583121274602-3e2820c69888?auto=format&fit=crop&w=1080&q=80"
+      },
+
+      // CATEGORY: ANIME / FANTASY
+      {
+        "id": "starlight-castle",
+        "title": "Starlight Castle & Ethereal Aurora",
+        "category": "Anime",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Anime", "Fantasy", "Castle", "Aurora", "Clouds", "Stars"],
+        "colors": ["#a855f7", "#ec4899", "#3b82f6"],
+        "downloads": "94,300",
+        "description": "Majestic crystalline anime floating castle islands nestled in twilight skies with vibrant aurora ribbons.",
+        "data_uri": "https://images.unsplash.com/photo-1534447677768-be436bb09401?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "cyber-katana-kunoichi",
+        "title": "Cyber Katana Kunoichi",
+        "category": "Anime",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Anime", "Cyberpunk", "Katana", "Samurai", "Neon", "Rain"],
+        "colors": ["#06b6d4", "#d946ef", "#0f172a"],
+        "downloads": "88,920",
+        "description": "Futuristic anime cybernetic warrior holding an energised cyan plasma katana in a rainy Neo-Tokyo neon alleyway.",
+        "data_uri": "https://images.unsplash.com/photo-1578632767115-351597cf2477?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "spirit-bloom-shrine",
+        "title": "Spirit Bloom Moonlit Torii",
+        "category": "Anime",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Anime", "Fantasy", "Torii", "Moon", "Sakura", "Spirits"],
+        "colors": ["#f43f5e", "#818cf8", "#09090b"],
+        "downloads": "107,410",
+        "description": "Mystical crimson anime shrine torii gate beneath an enormous glowing celestial full moon with floating spirit fireflies.",
+        "data_uri": "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "abstract-anime-colors",
+        "title": "Ethereal Dreamscape Colors",
+        "category": "Anime",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Anime", "Abstract", "Colors", "Vibrant", "Dream"],
+        "colors": ["#f472b6", "#c084fc", "#38bdf8"],
+        "downloads": "45,800",
+        "description": "Vibrant and flowing abstract colors reminiscent of classic 90s anime magical girl transformation sequences.",
+        "data_uri": "https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1080&q=80"
+      },
+
+      // CATEGORY: SPACE & SCI-FI
+      {
+        "id": "mecha-titan-dawn",
+        "title": "Mecha Titan Zero: Dawn Sentinel",
+        "category": "Sci-Fi",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Sci-Fi", "Mecha", "Sunrise", "Cityscape", "Epic"],
+        "colors": ["#ea580c", "#38bdf8", "#1e293b"],
+        "downloads": "55,110",
+        "description": "Colossal armored mecha guardian standing sentinel on a cliff overlooking a sun-drenched futuristic megacity.",
+        "data_uri": "https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "deep-space-nebula",
+        "title": "Orion's Tear Nebula",
+        "category": "Sci-Fi",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Space", "Nebula", "Galaxy", "Stars", "Cosmos", "Dark"],
+        "colors": ["#8b5cf6", "#ec4899", "#020617"],
+        "downloads": "120,400",
+        "description": "Breathtaking deep space photography capturing vibrant pink and purple cosmic dust clouds and millions of stars.",
+        "data_uri": "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "earth-orbit-station",
+        "title": "Earth Orbit Sunrise",
+        "category": "Sci-Fi",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Space", "Earth", "Orbit", "Planet", "Sci-Fi", "Blue"],
+        "colors": ["#3b82f6", "#eab308", "#000000"],
+        "downloads": "82,900",
+        "description": "The brilliant blue curvature of Earth viewed from low orbit as the sun rises over the dark horizon.",
+        "data_uri": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "astronaut-lunar-walk",
+        "title": "Lunar Explorer Zero-G",
+        "category": "Sci-Fi",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Space", "Astronaut", "Moon", "Exploration", "Sci-Fi"],
+        "colors": ["#94a3b8", "#38bdf8", "#0f172a"],
+        "downloads": "67,340",
+        "description": "An astronaut floating in the vast emptiness of space, reflecting the brilliant stars in their helmet visor.",
+        "data_uri": "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1080&q=80"
+      },
+
+      // CATEGORY: NATURE
+      {
+        "id": "misty-pine-forest",
+        "title": "Misty Emerald Pine Forest",
+        "category": "Nature",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Nature", "Forest", "Trees", "Fog", "Green", "Moody"],
+        "colors": ["#10b981", "#064e3b", "#cbd5e1"],
+        "downloads": "145,200",
+        "description": "A dense, ancient pine forest blanketed in thick, atmospheric morning fog with rich emerald green tones.",
+        "data_uri": "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "alpine-mountain-peaks",
+        "title": "Alpine Summit Sunrise",
+        "category": "Nature",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Nature", "Mountains", "Snow", "Sunrise", "Landscape"],
+        "colors": ["#fca5a5", "#bae6fd", "#1e293b"],
+        "downloads": "98,100",
+        "description": "Jagged, snow-capped mountain peaks catching the first vibrant pink and orange light of the morning sun.",
+        "data_uri": "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "crashing-ocean-waves",
+        "title": "Crashing Sapphire Waves",
+        "category": "Nature",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Nature", "Ocean", "Waves", "Water", "Blue", "Sea"],
+        "colors": ["#0ea5e9", "#0284c7", "#f8fafc"],
+        "downloads": "112,500",
+        "description": "Powerful, deep sapphire blue ocean waves crashing and creating pure white sea foam from a top-down drone perspective.",
+        "data_uri": "https://images.unsplash.com/photo-1470071131384-001b85755b36?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "golden-autumn-road",
+        "title": "Golden Autumn Highway",
+        "category": "Nature",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Nature", "Autumn", "Road", "Leaves", "Yellow", "Fall"],
+        "colors": ["#eab308", "#f97316", "#451a03"],
+        "downloads": "86,400",
+        "description": "A winding asphalt road cutting through a dense forest of incredibly vibrant yellow and orange autumn leaves.",
+        "data_uri": "https://images.unsplash.com/photo-1441974231531-c6227dbb6c41?auto=format&fit=crop&w=1080&q=80"
+      },
+
+      // CATEGORY: OLED BLACKS
+      {
+        "id": "phantom-stealth-gt",
+        "title": "Phantom Stealth GT (OLED Edition)",
+        "category": "OLED",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["OLED", "Supercar", "Dark", "Minimalist", "Carbon"],
+        "colors": ["#38bdf8", "#ef4444", "#020408"],
+        "downloads": "151,890",
+        "description": "Aggressive exotic supercar front fascia with razor-sharp LED light bars on deep inky OLED blacks.",
+        "data_uri": "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "ink-fluid-abstract",
+        "title": "Liquid Ink Abyss",
+        "category": "OLED",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["OLED", "Abstract", "Fluid", "Black", "Minimalist"],
+        "colors": ["#d1d5db", "#9ca3af", "#000000"],
+        "downloads": "134,200",
+        "description": "Mesmerizing metallic silver fluid dynamics swirling perfectly against a 100% true black background.",
+        "data_uri": "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "dark-matter-geometry",
+        "title": "Dark Matter Geometry",
+        "category": "OLED",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["OLED", "Geometry", "Dark", "3D", "Abstract"],
+        "colors": ["#f87171", "#38bdf8", "#050505"],
+        "downloads": "99,500",
+        "description": "Sleek matte black 3D geometric shapes with very subtle neon edge-lighting fading into pure black.",
+        "data_uri": "https://images.unsplash.com/photo-1528659567950-705f4277b06d?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "neon-wireframe-oled",
+        "title": "Neon Wireframe Grid",
+        "category": "OLED",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["OLED", "Neon", "Grid", "Cyber", "Dark", "Minimalist"],
+        "colors": ["#a855f7", "#ec4899", "#000000"],
+        "downloads": "87,600",
+        "description": "A minimalist, glowing purple and pink neon wireframe stretching across a void of absolute pitch black.",
+        "data_uri": "https://images.unsplash.com/photo-1604871000636-074fa5117945?auto=format&fit=crop&w=1920&q=80"
+      },
+
+      // CATEGORY: CYBERPUNK
+      {
+        "id": "neo-shinjuku-2099",
+        "title": "Neo-Shinjuku 2099",
+        "category": "Cyberpunk",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Cyberpunk", "Neon", "Cityscape", "Futuristic", "Rain", "Night"],
+        "colors": ["#8b5cf6", "#06b6d4", "#090d16"],
+        "downloads": "124,580",
+        "description": "Slick rain-washed neon metropolis drenched in ultraviolet glow, reflective asphalt, and holographic high-rises.",
+        "data_uri": "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "cyber-alley-rain",
+        "title": "Sector 7 Rainy Alley",
+        "category": "Cyberpunk",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Cyberpunk", "Alley", "Rain", "Neon", "Dystopia"],
+        "colors": ["#ef4444", "#3b82f6", "#171717"],
+        "downloads": "93,200",
+        "description": "A gritty, steam-filled dystopian alleyway illuminated solely by flickering red and blue neon signs.",
+        "data_uri": "https://images.unsplash.com/photo-1514316454349-750a7fd3da3a?auto=format&fit=crop&w=1080&q=80"
+      },
+      {
+        "id": "synthwave-sunset-drive",
+        "title": "Outrun Synthwave Drive",
+        "category": "Cyberpunk",
+        "device": "desktop",
+        "aspect": "16:9",
+        "res": "3840 x 2160",
+        "tags": ["Cyberpunk", "Synthwave", "Retro", "Sunset", "Grid", "80s"],
+        "colors": ["#f43f5e", "#8b5cf6", "#1e1b4b"],
+        "downloads": "111,000",
+        "description": "A classic 80s synthwave sunset with a glowing wireframe grid and a massive retro digital sun on the horizon.",
+        "data_uri": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?auto=format&fit=crop&w=1920&q=80"
+      },
+      {
+        "id": "holographic-data-core",
+        "title": "Quantum Data Core",
+        "category": "Cyberpunk",
+        "device": "mobile",
+        "aspect": "9:16",
+        "res": "2160 x 3840",
+        "tags": ["Cyberpunk", "Tech", "Hologram", "Code", "Matrix"],
+        "colors": ["#10b981", "#06b6d4", "#022c22"],
+        "downloads": "76,800",
+        "description": "Endless streams of glowing cyan and emerald digital code flowing through a massive futuristic server core.",
+        "data_uri": "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1080&q=80"
+      }
+    ];
+
+    let WALLPAPERS = [...BASE_WALLPAPERS];
+    let userUploads = [];
+
+    async function loadUserUploads() {
+      if (typeof WallpaperDB !== 'undefined') {
+        try {
+          await WallpaperDB.migrateLegacyLocalStorage();
+          userUploads = await WallpaperDB.getAllWallpapers();
+        } catch (err) {
+          console.warn('Database read error:', err);
+        }
+      }
+      WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
+      updateUserUploadCount();
+    }
+
+    async function saveUserUploads() {
+      if (typeof WallpaperDB !== 'undefined' && userUploads.length > 0) {
+        try {
+          await WallpaperDB.saveWallpaper(userUploads[0]);
+        } catch (err) {
+          console.warn('Database save error:', err);
+        }
+      }
+      updateUserUploadCount();
+    }
+
+    function updateUserUploadCount() {
+      const countEl = document.getElementById('user-upload-count');
+      if (countEl) countEl.textContent = userUploads.length;
+      const counterTag = document.getElementById('total-wallpapers-counter');
+      if (counterTag) counterTag.textContent = `${WALLPAPERS.length} 4K UHD Master Assets`;
+    }
+
+    let currentFilterCategory = 'all';
+    let currentFilterAspect = 'all';
+    let currentSort = 'newest';
+    let currentSearch = '';
+    let favorites = [];
+
+    try {
+      const favStored = localStorage.getItem('realgx_favorites');
+      if (favStored) favorites = JSON.parse(favStored) || [];
+    } catch(e) {}
+
+    let activeStudioWallpaper = null;
+    let activeMockupFrame = 'clean';
+    let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
+    let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
+
+    let uploadImageData = null;
+    let uploadDetectedAspect = '16:9';
+    let uploadDetectedRes = '3840 x 2160';
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const bgColors = {
+        success: 'bg-emerald-950/95 border-emerald-500/50 text-emerald-300',
+        error: 'bg-red-950/95 border-red-500/50 text-red-300',
+        info: 'bg-slate-900/95 border-cyan-500/50 text-cyan-300'
+      };
+      toast.className = `w-full sm:w-auto px-4 py-2.5 rounded-xl border text-xs font-semibold shadow-2xl backdrop-blur-md flex items-center gap-2 pointer-events-auto transform translate-y-2 opacity-0 transition-all duration-300 ${bgColors[type] || bgColors.info}`;
+      toast.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '⚠️' : 'ℹ️'}</span> <span class="truncate">${msg}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await window.loadUserUploads();
+      initHeroSpotlight();
+      initCategoryPills();
+      initAspectTabs();
+      initSorting();
+      initSearch();
+      initUploadStudio();
+      initStudioModal();
+      initFavoritesDrawer();
+      initGuideTabs();
+      filterAndRenderWallpapers();
+      updateFavoritesBadge();
+
+      const triggerRandom = () => {
+        if (WALLPAPERS.length > 0) {
+          const randomWp = WALLPAPERS[Math.floor(Math.random() * WALLPAPERS.length)];
+          openStudioModal(randomWp);
+        }
+      };
+      const surpriseBtn = document.getElementById('surprise-me-btn');
+      const surpriseBtnMob = document.getElementById('surprise-me-btn-mobile');
+      if (surpriseBtn) surpriseBtn.onclick = triggerRandom;
+      if (surpriseBtnMob) surpriseBtnMob.onclick = triggerRandom;
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          document.getElementById('search-input')?.focus();
+        }
+      });
+    });
+
+    function initHeroSpotlight() {
+      const spotlight = WALLPAPERS[0] || BASE_WALLPAPERS[0];
+      const img = document.getElementById('spotlight-img');
+      const title = document.getElementById('spotlight-title');
+      const cat = document.getElementById('spotlight-category');
+      const aspectBadge = document.getElementById('spotlight-aspect-badge');
+      const stats = document.getElementById('spotlight-stats');
+      const openBtn = document.getElementById('spotlight-open-btn');
+      const dlBtn = document.getElementById('spotlight-dl-btn');
+
+      if (!spotlight) return;
+
+      img.src = spotlight.data_uri;
+      title.textContent = spotlight.title;
+      cat.textContent = spotlight.category;
+      aspectBadge.textContent = `${spotlight.aspect} ${spotlight.device === 'mobile' ? 'Mobile' : 'Desktop'}`;
+      stats.textContent = `${spotlight.downloads} downloads`;
+
+      openBtn.onclick = () => openStudioModal(spotlight);
+      dlBtn.onclick = () => executeDirectDownload(spotlight);
+    }
+
+    function initCategoryPills() { renderCategoryPills(); }
+
+    function renderCategoryPills() {
+      const container = document.getElementById('category-pills-container');
+      const categories = [
+        { id: 'all', label: 'All Wallpapers', icon: '⚡' },
+        { id: 'my-uploads', label: `My Uploads (${userUploads.length})`, icon: '🌟' },
+        { id: 'Cars', label: 'Supercars', icon: '🏎️' },
+        { id: 'Anime', label: 'Anime & Fantasy', icon: '🗡️' },
+        { id: 'JDM', label: 'JDM Drift', icon: '🌸' },
+        { id: 'Cyberpunk', label: 'Cyberpunk', icon: '⚡' },
+        { id: 'OLED', label: 'OLED Blacks', icon: '🖤' },
+        { id: 'Nature', label: 'Nature', icon: '🌲' },
+        { id: 'Sci-Fi', label: 'Sci-Fi', icon: '🚀' },
+        { id: 'Custom', label: 'Custom', icon: '✨' }
+      ];
+
+      container.innerHTML = categories.map(cat => `
+        <button class="cat-pill px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 flex-shrink-0 ${currentFilterCategory === cat.id ? 'bg-cyan-500 text-black shadow-lg shadow-cyan-500/20' : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'}" data-category="${cat.id}">
+          <span>${cat.icon}</span> ${cat.label}
+        </button>
+      `).join('');
+
+      container.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.onclick = () => {
+          currentFilterCategory = btn.getAttribute('data-category');
+          renderCategoryPills();
+          filterAndRenderWallpapers();
+        };
+      });
+    }
+
+    function initAspectTabs() {
+      const tabs = document.querySelectorAll('#aspect-tabs .aspect-tab');
+      tabs.forEach(tab => {
+        tab.onclick = () => {
+          tabs.forEach(t => {
+            t.classList.remove('bg-cyan-500', 'text-black', 'shadow-sm');
+            t.classList.add('text-slate-400');
+          });
+          tab.classList.add('bg-cyan-500', 'text-black', 'shadow-sm');
+          tab.classList.remove('text-slate-400');
+          currentFilterAspect = tab.getAttribute('data-aspect');
+          filterAndRenderWallpapers();
+        };
+      });
+    }
+
+    function initSorting() {
+      document.getElementById('sort-select').onchange = (e) => {
+        currentSort = e.target.value;
+        filterAndRenderWallpapers();
+      };
+    }
+
+    function initSearch() {
+      const input = document.getElementById('search-input');
+      const clearBtn = document.getElementById('clear-search-btn');
+
+      input.oninput = (e) => {
+        currentSearch = e.target.value.trim().toLowerCase();
+        clearBtn.classList.toggle('hidden', currentSearch.length === 0);
+        filterAndRenderWallpapers();
+      };
+
+      clearBtn.onclick = () => {
+        input.value = '';
+        currentSearch = '';
+        clearBtn.classList.add('hidden');
+        filterAndRenderWallpapers();
+      };
+
+      document.querySelectorAll('.trend-tag').forEach(tagBtn => {
+        tagBtn.onclick = () => {
+          input.value = tagBtn.getAttribute('data-tag');
+          currentSearch = input.value.toLowerCase();
+          clearBtn.classList.remove('hidden');
+          filterAndRenderWallpapers();
+        };
+      });
+
+      document.getElementById('reset-all-filters').onclick = resetFilters;
+      document.getElementById('empty-reset-btn').onclick = resetFilters;
+    }
+
+    function resetFilters() {
+      currentFilterCategory = 'all';
+      currentFilterAspect = 'all';
+      currentSearch = '';
+      document.getElementById('search-input').value = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+      renderCategoryPills();
+      const tabs = document.querySelectorAll('#aspect-tabs .aspect-tab');
+      tabs.forEach((t, idx) => {
+        t.classList.toggle('bg-cyan-500', idx === 0);
+        t.classList.toggle('text-black', idx === 0);
+        t.classList.toggle('shadow-sm', idx === 0);
+        t.classList.toggle('text-slate-400', idx !== 0);
+      });
+      filterAndRenderWallpapers();
+    }
+
+    function initUploadStudio() {
+      const fileInput = document.getElementById('custom-file-input');
+      const dropzone = document.getElementById('upload-dropzone');
+      const emptyView = document.getElementById('dropzone-empty-view');
+      const previewView = document.getElementById('dropzone-preview-view');
+      const liveImg = document.getElementById('upload-live-preview');
+      const dimBadge = document.getElementById('preview-dimensions-badge');
+      const removeBtn = document.getElementById('remove-preview-btn');
+      const urlInput = document.getElementById('custom-url-input');
+      const loadUrlBtn = document.getElementById('load-url-btn');
+      const titleInput = document.getElementById('custom-title-input');
+      const catSelect = document.getElementById('custom-category-select');
+      const tagsInput = document.getElementById('custom-tags-input');
+      const descInput = document.getElementById('custom-desc-input');
+      const publishBtn = document.getElementById('publish-wallpaper-btn');
+      const resetBtn = document.getElementById('reset-upload-btn');
+      const aspectBtns = document.querySelectorAll('.custom-aspect-btn');
+
+      dropzone.onclick = (e) => {
+        if (e.target !== removeBtn && !removeBtn.contains(e.target)) fileInput.click();
+      };
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
+        });
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+      });
+
+      fileInput.onchange = (e) => {
+        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
+      };
+
+      function processFile(file) {
+        if (!file.type.startsWith('image/')) {
+          showToast('Please select a valid image file (PNG, JPG, WEBP).', 'error');
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => setUploadImage(event.target.result, file.name.replace(/\.[^/.]+$/, ""));
+        reader.readAsDataURL(file);
+      }
+
+      loadUrlBtn.onclick = () => {
+        const url = urlInput.value.trim();
+        if (!url) { showToast('Please enter an image URL.', 'error'); return; }
+        setUploadImage(url, 'Custom Web Wallpaper');
+      };
+
+      function setUploadImage(src, suggestedTitle) {
+        uploadImageData = src;
+        liveImg.src = src;
+
+        const probeImg = new Image();
+        probeImg.onload = () => {
+          const w = probeImg.naturalWidth || 3840;
+          const h = probeImg.naturalHeight || 2160;
+          uploadDetectedRes = `${w} x ${h}`;
+          dimBadge.textContent = `${w} × ${h} • ${w >= h ? 'Desktop' : 'Mobile'}`;
+
+          if (h > w) selectAspect('9:16');
+          else if (w / h > 2.0) selectAspect('21:9');
+          else selectAspect('16:9');
+
+          if (!titleInput.value.trim() && suggestedTitle) {
+            titleInput.value = suggestedTitle.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          }
+
+          emptyView.classList.add('hidden');
+          previewView.classList.remove('hidden');
+          showToast('Image loaded! You can now customize title and details.', 'success');
+        };
+        probeImg.onerror = () => showToast('Could not load image. Please verify file format or URL.', 'error');
+        probeImg.src = src;
+      }
+
+      removeBtn.onclick = (e) => { e.stopPropagation(); clearUploadPreview(); };
+
+      function clearUploadPreview() {
+        uploadImageData = null;
+        fileInput.value = '';
+        urlInput.value = '';
+        liveImg.src = '';
+        emptyView.classList.remove('hidden');
+        previewView.classList.add('hidden');
+      }
+
+      aspectBtns.forEach(btn => {
+        btn.onclick = () => selectAspect(btn.getAttribute('data-aspect'));
+      });
+
+      function selectAspect(aspect) {
+        uploadDetectedAspect = aspect;
+        aspectBtns.forEach(b => {
+          b.classList.remove('bg-cyan-500', 'text-black');
+          b.classList.add('text-slate-400');
+        });
+        const targetBtn = Array.from(aspectBtns).find(b => b.getAttribute('data-aspect') === aspect);
+        if (targetBtn) {
+          targetBtn.classList.add('bg-cyan-500', 'text-black');
+          targetBtn.classList.remove('text-slate-400');
+        }
+      }
+
+      publishBtn.onclick = async () => {
+        const title = titleInput.value.trim();
+        if (!title) { showToast('Please give your wallpaper a title before publishing!', 'error'); titleInput.focus(); return; }
+        if (!uploadImageData) { showToast('Please select or upload an image file first!', 'error'); return; }
+
+        const category = catSelect.value;
+        const aspect = uploadDetectedAspect;
+        const device = aspect === '9:16' ? 'mobile' : 'desktop';
+        const rawTags = tagsInput.value.trim();
+        const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [category, 'Custom', '4K'];
+        const desc = descInput.value.trim() || `Custom ${title} wallpaper uploaded by user to REALGX Studio.`;
+
+        const newWallpaper = {
+          id: 'user-wp-' + Date.now(),
+          title: title,
+          category: category,
+          device: device,
+          aspect: aspect,
+          res: uploadDetectedRes,
+          tags: tags,
+          colors: ['#00f0ff', '#ff007f', '#a855f7'],
+          downloads: '1',
+          description: desc,
+          data_uri: uploadImageData,
+          isUserUpload: true,
+          dateAdded: Date.now()
+        };
+
+        userUploads.unshift(newWallpaper);
+        await window.saveUserUploads();
+        WALLPAPERS.unshift(newWallpaper);
+
+        clearUploadPreview();
+        titleInput.value = '';
+        tagsInput.value = '';
+        descInput.value = '';
+
+        initHeroSpotlight();
+        renderCategoryPills();
+        filterAndRenderWallpapers();
+        showToast(`🎉 "${title}" saved to database & published!`, 'success');
+
+        const gallerySection = document.getElementById('gallery-section');
+        if (gallerySection) gallerySection.scrollIntoView({ behavior: 'smooth' });
+      };
+
+      resetBtn.onclick = () => {
+        clearUploadPreview();
+        titleInput.value = '';
+        tagsInput.value = '';
+        descInput.value = '';
+        showToast('Upload form cleared.', 'info');
+      };
+    }
+
+    function filterAndRenderWallpapers() {
+      const grid = document.getElementById('wallpapers-grid');
+      const emptyState = document.getElementById('empty-state');
+      const resultsCount = document.getElementById('results-count');
+      const filterBanner = document.getElementById('active-filter-banner');
+      const filterText = document.getElementById('active-filter-text');
+
+      let filtered = [...WALLPAPERS];
+
+      if (currentFilterCategory === 'my-uploads') {
+        filtered = filtered.filter(w => w.isUserUpload === true);
+      } else if (currentFilterCategory !== 'all') {
+        filtered = filtered.filter(w => w.category === currentFilterCategory);
+      }
+
+      if (currentFilterAspect !== 'all') {
+        filtered = filtered.filter(w => w.aspect === currentFilterAspect);
+      }
+
+      if (currentSearch) {
+        filtered = filtered.filter(w => {
+          const inTitle = w.title.toLowerCase().includes(currentSearch);
+          const inCat = w.category.toLowerCase().includes(currentSearch);
+          const inTags = w.tags.some(t => t.toLowerCase().includes(currentSearch));
+          const inDesc = w.description && w.description.toLowerCase().includes(currentSearch);
+          return inTitle || inCat || inTags || inDesc;
+        });
+      }
+
+      if (currentSort === 'newest') {
+        filtered.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+      } else if (currentSort === 'downloads') {
+        filtered.sort((a, b) => parseInt(b.downloads.replace(/,/g, '')) - parseInt(a.downloads.replace(/,/g, '')));
+      } else if (currentSort === 'title') {
+        filtered.sort((a, b) => a.title.localeCompare(b.title));
+      }
+
+      resultsCount.textContent = `Showing ${filtered.length} of ${WALLPAPERS.length} Wallpapers`;
+
+      const hasFilter = currentFilterCategory !== 'all' || currentFilterAspect !== 'all' || currentSearch !== '';
+      if (hasFilter) {
+        filterBanner.classList.remove('hidden');
+        const labels = [];
+        if (currentFilterCategory !== 'all') labels.push(`Category: ${currentFilterCategory}`);
+        if (currentFilterAspect !== 'all') labels.push(`Aspect: ${currentFilterAspect}`);
+        if (currentSearch) labels.push(`Search: "${currentSearch}"`);
+        filterText.textContent = labels.join(' | ');
+      } else {
+        filterBanner.classList.add('hidden');
+      }
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+
+      grid.innerHTML = filtered.map(w => {
+        const isFav = favorites.includes(w.id);
+        const isMobile = w.aspect === '9:16';
+        return `
+          <div class="glass-card rounded-2xl overflow-hidden flex flex-col group relative ${w.isUserUpload ? 'border-cyan-500/50 glow-cyan' : ''}">
+            <div class="relative w-full ${isMobile ? 'aspect-[9/13] sm:aspect-[9/14]' : 'aspect-[16/10]'} overflow-hidden bg-slate-950 cursor-pointer wp-card-trigger" data-id="${w.id}">
+              <img src="${w.data_uri}" alt="${w.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+              <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
+              
+              <div class="absolute top-3 left-3 right-16 flex flex-wrap items-center gap-1.5">
+                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full ${isMobile ? 'bg-pink-950/80 text-pink-400 border border-pink-500/40' : 'bg-cyan-950/80 text-cyan-400 border border-cyan-500/40'}">${w.aspect}</span>
+                <span class="px-2 py-0.5 text-[10px] font-bold bg-slate-900/80 text-slate-300 border border-slate-700 rounded-full">${w.category}</span>
+                ${w.isUserUpload ? `<span class="px-2 py-0.5 text-[10px] font-black bg-gradient-to-r from-cyan-400 to-pink-500 text-black rounded-full shadow-md animate-pulse">MY UPLOAD</span>` : ''}
+              </div>
+
+              <div class="absolute top-3 right-3 flex items-center gap-1.5">
+                <button class="fav-toggle-btn p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700/80 transition-all ${isFav ? 'text-pink-500' : 'text-slate-400 hover:text-pink-400'}" data-id="${w.id}" title="${isFav ? 'Remove Favorite' : 'Save Favorite'}">
+                  <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+                ${w.isUserUpload ? `
+                  <button class="delete-upload-btn p-2 rounded-xl bg-red-950/80 hover:bg-red-800 text-red-300 border border-red-500/40 transition-all" data-id="${w.id}" title="Delete Your Upload">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  </button>
+                ` : ''}
+              </div>
+
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                <span class="px-4 py-2 rounded-xl bg-cyan-500 text-black font-extrabold text-xs shadow-2xl flex items-center gap-1.5 transform scale-95 group-hover:scale-100 transition-transform">
+                  <span>🎨</span> Open in Studio
+                </span>
+              </div>
+            </div>
+
+            <div class="p-4 flex flex-col justify-between flex-1 space-y-3">
+              <div>
+                <h4 class="font-bold text-white text-sm line-clamp-1 group-hover:text-cyan-300 transition-colors" title="${w.title}">${w.title}</h4>
+                <div class="flex items-center justify-between text-xs text-slate-400 mt-1">
+                  <span>${w.res}</span>
+                  <span class="text-slate-500">${w.downloads} DLs</span>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-1">
+                ${w.tags.slice(0, 3).map(tag => `<span class="px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-400 font-medium">#${tag}</span>`).join('')}
+              </div>
+
+              <div class="pt-2 border-t border-slate-800/80 flex items-center gap-2">
+                <button class="open-studio-btn flex-1 py-2 px-3 rounded-xl bg-cyan-950/60 hover:bg-cyan-900/60 border border-cyan-500/40 text-cyan-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5" data-id="${w.id}">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                  <span>Studio View</span>
+                </button>
+                
+                <button class="card-dl-btn p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 transition-colors" data-id="${w.id}" title="Download 4K">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      grid.querySelectorAll('.wp-card-trigger, .open-studio-btn').forEach(el => {
+        el.onclick = () => {
+          const id = el.getAttribute('data-id');
+          const wp = WALLPAPERS.find(item => item.id === id);
+          if (wp) openStudioModal(wp);
+        };
+      });
+
+      grid.querySelectorAll('.card-dl-btn').forEach(btn => {
+        btn.onclick = () => {
+          const id = btn.getAttribute('data-id');
+          const wp = WALLPAPERS.find(item => item.id === id);
+          if (wp) executeDirectDownload(wp);
+        };
+      });
+
+      grid.querySelectorAll('.fav-toggle-btn').forEach(btn => {
+        btn.onclick = (e) => { e.stopPropagation(); toggleFavorite(btn.getAttribute('data-id')); };
+      });
+
+      grid.querySelectorAll('.delete-upload-btn').forEach(btn => {
+        btn.onclick = (e) => { e.stopPropagation(); window.deleteUserUpload(btn.getAttribute('data-id')); };
+      });
+    }
+
+    async function deleteUserUpload(id) {
+      const wp = userUploads.find(w => w.id === id);
+      if (!wp) return;
+      if (!confirm(`Are you sure you want to delete your custom wallpaper "${wp.title}"?`)) return;
+
+      if (typeof WallpaperDB !== 'undefined') await WallpaperDB.deleteWallpaper(id);
+
+      userUploads = userUploads.filter(w => w.id !== id);
+      WALLPAPERS = WALLPAPERS.filter(w => w.id !== id);
+
+      updateUserUploadCount();
+      initHeroSpotlight();
+      renderCategoryPills();
+      filterAndRenderWallpapers();
+      showToast(`Removed "${wp.title}" from your uploads.`, 'info');
+    }
+
+    function toggleFavorite(id) {
+      const idx = favorites.indexOf(id);
+      if (idx > -1) {
+        favorites.splice(idx, 1);
+        showToast('Removed from favorites', 'info');
+      } else {
+        favorites.push(id);
+        showToast('Saved to your favorites!', 'success');
+      }
+      try { localStorage.setItem('realgx_favorites', JSON.stringify(favorites)); } catch(e) {}
+      updateFavoritesBadge();
+      filterAndRenderWallpapers();
+      renderFavoritesDrawer();
+      updateStudioModalFavButton();
+    }
+
+    function updateFavoritesBadge() {
+      const badge = document.getElementById('fav-count-badge');
+      if (badge) badge.textContent = favorites.length;
+    }
+
+    function initStudioModal() {
+      const modal = document.getElementById('studio-modal');
+      const closeBtn = document.getElementById('close-modal-btn');
+      const resetTuningBtn = document.getElementById('reset-tuning-btn');
+      const downloadExecuteBtn = document.getElementById('modal-download-execute');
+
+      closeBtn.onclick = closeStudioModal;
+      modal.onclick = (e) => { if (e.target === modal) closeStudioModal(); };
+
+      const mockupTabs = document.querySelectorAll('#device-mockup-tabs .mockup-tab');
+      mockupTabs.forEach(tab => {
+        tab.onclick = () => {
+          mockupTabs.forEach(t => {
+            t.classList.remove('bg-cyan-500', 'text-black', 'active-mockup');
+            t.classList.add('text-slate-400');
+          });
+          tab.classList.add('bg-cyan-500', 'text-black', 'active-mockup');
+          tab.classList.remove('text-slate-400');
+          activeMockupFrame = tab.getAttribute('data-frame');
+          renderMockupViewport();
+        };
+      });
+
+      ['brightness', 'contrast', 'saturation', 'hue', 'blur'].forEach(prop => {
+        const slider = document.getElementById(`slider-${prop}`);
+        const valLabel = document.getElementById(`val-${prop}`);
+        slider.oninput = (e) => {
+          currentTuning[prop] = parseFloat(e.target.value);
+          const unit = prop === 'hue' ? '°' : prop === 'blur' ? 'px' : '%';
+          valLabel.textContent = `${currentTuning[prop]}${unit}`;
+          applyTuningFilter();
+        };
+      });
+
+      resetTuningBtn.onclick = resetStudioTuning;
+
+      const resBtns = document.querySelectorAll('.res-btn');
+      resBtns.forEach(btn => {
+        btn.onclick = () => {
+          resBtns.forEach(b => {
+            b.classList.remove('border-cyan-400', 'bg-cyan-950/40', 'active-res');
+            b.classList.add('border-slate-800', 'bg-slate-900/60');
+          });
+          btn.classList.add('border-cyan-400', 'bg-cyan-950/40', 'active-res');
+          btn.classList.remove('border-slate-800', 'bg-slate-900/60');
+          currentExportResolution = {
+            w: parseInt(btn.getAttribute('data-w')),
+            h: parseInt(btn.getAttribute('data-h')),
+            label: btn.getAttribute('data-label')
+          };
+          document.getElementById('dl-button-label').textContent = `Download ${currentExportResolution.label}`;
+        };
+      });
+
+      downloadExecuteBtn.onclick = () => {
+        if (activeStudioWallpaper) executeCanvasDownload(activeStudioWallpaper, currentExportResolution, currentTuning);
+      };
+
+      document.getElementById('modal-fav-toggle').onclick = () => {
+        if (activeStudioWallpaper) toggleFavorite(activeStudioWallpaper.id);
+      };
+    }
+
+    function openStudioModal(wp) {
+      activeStudioWallpaper = wp;
+      resetStudioTuning();
+
+      document.getElementById('modal-title').textContent = wp.title;
+      document.getElementById('modal-category').textContent = wp.category;
+      document.getElementById('modal-res-badge').textContent = wp.res;
+      document.getElementById('modal-desc').textContent = wp.description || 'High-definition uncompressed master wallpaper file.';
+
+      const tagsContainer = document.getElementById('modal-tags');
+      tagsContainer.innerHTML = wp.tags.map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] text-cyan-300 font-mono">#${t}</span>`).join('');
+
+      const paletteContainer = document.getElementById('modal-palette-container');
+      const colors = wp.colors && wp.colors.length ? wp.colors : ['#00f0ff', '#ff007f', '#a855f7'];
+      paletteContainer.innerHTML = colors.map(c => `
+        <button class="palette-swatch flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-400 transition-colors text-[10px] font-mono text-slate-300" data-hex="${c}" title="Copy ${c}">
+          <span class="w-3.5 h-3.5 rounded-full" style="background-color: ${c}"></span>
+          <span>${c}</span>
+        </button>
+      `).join('');
+
+      paletteContainer.querySelectorAll('.palette-swatch').forEach(sw => {
+        sw.onclick = () => { copyToClipboard(sw.getAttribute('data-hex')); showToast(`Copied ${sw.getAttribute('data-hex')} to clipboard!`, 'success'); };
+      });
+
+      if (wp.aspect === '9:16') setMockupTab('phone');
+      else if (wp.aspect === '21:9') setMockupTab('ultrawide');
+      else setMockupTab('clean');
+
+      updateStudioModalFavButton();
+
+      const modal = document.getElementById('studio-modal');
+      modal.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function setMockupTab(frame) {
+      activeMockupFrame = frame;
+      document.querySelectorAll('#device-mockup-tabs .mockup-tab').forEach(t => {
+        const isMatch = t.getAttribute('data-frame') === frame;
+        t.classList.toggle('bg-cyan-500', isMatch);
+        t.classList.toggle('text-black', isMatch);
+        t.classList.toggle('active-mockup', isMatch);
+        t.classList.toggle('text-slate-400', !isMatch);
+      });
+      renderMockupViewport();
+    }
+
+    function updateStudioModalFavButton() {
+      const btn = document.getElementById('modal-fav-toggle');
+      if (!btn || !activeStudioWallpaper) return;
+      const isFav = favorites.includes(activeStudioWallpaper.id);
+      btn.classList.toggle('text-pink-500', isFav);
+      btn.classList.toggle('text-slate-400', !isFav);
+    }
+
+    function closeStudioModal() {
+      document.getElementById('studio-modal').classList.add('hidden');
+      document.body.style.overflow = '';
+      activeStudioWallpaper = null;
+    }
+
+    function resetStudioTuning() {
+      currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
+      ['brightness', 'contrast', 'saturation', 'hue', 'blur'].forEach(prop => {
+        const slider = document.getElementById(`slider-${prop}`);
+        const label = document.getElementById(`val-${prop}`);
+        if (slider) slider.value = currentTuning[prop];
+        if (label) label.textContent = `${currentTuning[prop]}${prop === 'hue' ? '°' : prop === 'blur' ? 'px' : '%'}`;
+      });
+      applyTuningFilter();
+    }
+
+    function applyTuningFilter() {
+      const targetImg = document.getElementById('mockup-wallpaper-img');
+      if (targetImg) {
+        targetImg.style.filter = `brightness(${currentTuning.brightness}%) contrast(${currentTuning.contrast}%) saturate(${currentTuning.saturation}%) hue-rotate(${currentTuning.hue}deg) blur(${currentTuning.blur}px)`;
+      }
+    }
+
+    function renderMockupViewport() {
+      const viewport = document.getElementById('mockup-viewport');
+      if (!activeStudioWallpaper) return;
+
+      const uri = activeStudioWallpaper.data_uri;
+      let innerContent = '';
+
+      if (activeMockupFrame === 'clean') {
+        innerContent = `
+          <div class="relative max-h-full max-w-full rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950 flex items-center justify-center">
+            <img id="mockup-wallpaper-img" src="${uri}" alt="Wallpaper Studio" class="max-h-[260px] sm:max-h-[380px] w-auto object-contain transition-all duration-100">
+          </div>
+        `;
+      } else if (activeMockupFrame === 'monitor') {
+        innerContent = `
+          <div class="w-full max-w-xl flex flex-col items-center">
+            <div class="monitor-frame w-full aspect-[16/9] bg-slate-950 rounded-t-xl p-2 sm:p-2.5 border-4 border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="Gaming PC Monitor" class="w-full h-full object-cover rounded transition-all duration-100">
+              <div class="absolute bottom-1 right-2 text-[9px] font-mono text-cyan-400 bg-black/60 px-1.5 rounded">165Hz HDR</div>
+            </div>
+            <div class="w-16 sm:w-20 h-3 sm:h-4 bg-slate-800 border-x border-slate-700"></div>
+            <div class="w-28 sm:w-36 h-2 sm:h-2.5 bg-slate-700 rounded-b-lg shadow-lg"></div>
+          </div>
+        `;
+      } else if (activeMockupFrame === 'phone') {
+        innerContent = `
+          <div class="phone-frame w-44 sm:w-56 aspect-[9/18] bg-black rounded-[32px] sm:rounded-[36px] p-2 sm:p-2.5 border-4 border-slate-800 relative overflow-hidden flex flex-col items-center shadow-2xl">
+            <div class="w-14 sm:w-16 h-3.5 sm:h-4 bg-black rounded-full absolute top-3.5 sm:top-4 z-20 flex items-center justify-center border border-slate-900">
+              <div class="w-2 h-2 rounded-full bg-slate-900 ml-auto mr-2"></div>
+            </div>
+            <div class="w-full h-full rounded-[24px] sm:rounded-[28px] overflow-hidden relative bg-slate-950">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="OLED Phone Screen" class="w-full h-full object-cover transition-all duration-100">
+              <div class="absolute top-9 sm:top-10 inset-x-0 text-center text-white drop-shadow-lg pointer-events-none">
+                <div class="text-2xl sm:text-3xl font-black tracking-tight">08:45</div>
+                <div class="text-[9px] sm:text-[10px] font-medium opacity-80">Saturday, October 17</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (activeMockupFrame === 'ultrawide') {
+        innerContent = `
+          <div class="w-full max-w-2xl flex flex-col items-center">
+            <div class="monitor-frame w-full aspect-[21/9] bg-slate-950 rounded-t-xl p-1.5 sm:p-2 border-4 border-slate-800 relative overflow-hidden flex items-center justify-center">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="21:9 Ultrawide Curved" class="w-full h-full object-cover rounded transition-all duration-100">
+              <div class="absolute bottom-1 left-2 text-[8px] font-mono text-pink-400 bg-black/70 px-1 rounded">21:9 Cinema UltraWide</div>
+            </div>
+            <div class="w-14 sm:w-16 h-2.5 sm:h-3 bg-slate-800"></div>
+            <div class="w-36 sm:w-44 h-2 bg-slate-700 rounded-b shadow-lg"></div>
+          </div>
+        `;
+      }
+
+      viewport.innerHTML = innerContent;
+      applyTuningFilter();
+    }
+
+    function executeDirectDownload(wp) {
+      executeCanvasDownload(wp, { w: 3840, h: 2160, label: '4K Ultra HD' }, { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 });
+    }
+
+    function executeCanvasDownload(wp, res, tuning) {
+      showToast(`Rendering ${res.label}...`, 'info');
+
+      const canvas = document.getElementById('export-canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        canvas.width = res.w;
+        canvas.height = res.h;
+        ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
+
+        const hRatio = canvas.width / img.width;
+        const vRatio = canvas.height / img.height;
+        const ratio = Math.max(hRatio, vRatio);
+        const centerShiftX = (canvas.width - img.width * ratio) / 2;
+        const centerShiftY = (canvas.height - img.height * ratio) / 2;
+
+        ctx.drawImage(img, 0, 0, img.width, img.height, centerShiftX, centerShiftY, img.width * ratio, img.height * ratio);
+
+        try {
+          const downloadUrl = canvas.toDataURL('image/jpeg', 0.95);
+          const link = document.createElement('a');
+          const cleanTitle = wp.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+          link.download = `REALGX_${cleanTitle}_${res.w}x${res.h}.jpg`;
+          link.href = downloadUrl;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          showToast(`✓ Download started for ${wp.title}!`, 'success');
+        } catch (err) {
+          const link = document.createElement('a');
+          link.download = `REALGX_${wp.id}.jpg`;
+          link.href = wp.data_uri;
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          showToast('Downloaded source wallpaper.', 'success');
+        }
+      };
+
+      img.onerror = () => {
+        showToast('Direct download initiated.', 'info');
+        const link = document.createElement('a');
+        link.download = `REALGX_${wp.id}.jpg`;
+        link.href = wp.data_uri;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      };
+
+      img.src = wp.data_uri;
+    }
+
+    function initFavoritesDrawer() {
+      const drawer = document.getElementById('favorites-drawer');
+      const openBtn = document.getElementById('favorites-btn');
+      const closeBtn = document.getElementById('close-favorites-btn');
+      const doneBtn = document.getElementById('close-drawer-done-btn');
+      const clearBtn = document.getElementById('clear-all-favs-btn');
+
+      openBtn.onclick = () => {
+        renderFavoritesDrawer();
+        drawer.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      };
+
+      const closeDrawer = () => { drawer.classList.add('hidden'); document.body.style.overflow = ''; };
+
+      closeBtn.onclick = closeDrawer;
+      doneBtn.onclick = closeDrawer;
+      drawer.onclick = (e) => { if (e.target === drawer) closeDrawer(); };
+
+      clearBtn.onclick = () => {
+        favorites = [];
+        try { localStorage.removeItem('realgx_favorites'); } catch(e) {}
+        updateFavoritesBadge();
+        renderFavoritesDrawer();
+        filterAndRenderWallpapers();
+        showToast('Cleared all saved favorites.', 'info');
+      };
+    }
+
+    function renderFavoritesDrawer() {
+      const container = document.getElementById('favorites-list-container');
+      const favItems = WALLPAPERS.filter(w => favorites.includes(w.id));
+
+      if (favItems.length === 0) {
+        container.innerHTML = `
+          <div class="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3 text-slate-400">
+            <span class="text-3xl">💔</span>
+            <p class="font-bold text-white text-sm">No favorites saved yet</p>
+            <p class="text-xs">Click the heart icon on any wallpaper card or in the studio to save it for quick access.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = favItems.map(w => `
+        <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors">
+          <img src="${w.data_uri}" alt="${w.title}" class="w-16 h-12 object-cover rounded-lg bg-slate-950 flex-shrink-0 cursor-pointer fav-open-studio" data-id="${w.id}">
+          <div class="flex-1 min-w-0">
+            <h5 class="text-xs font-bold text-white truncate cursor-pointer fav-open-studio" data-id="${w.id}">${w.title}</h5>
+            <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+              <span class="text-cyan-400">${w.category}</span>
+              <span>•</span>
+              <span>${w.aspect}</span>
+            </div>
+          </div>
+          <button class="remove-fav-btn p-1.5 text-slate-400 hover:text-red-400 transition-colors" data-id="${w.id}" title="Remove">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.fav-open-studio').forEach(el => {
+        el.onclick = () => {
+          const wp = WALLPAPERS.find(item => item.id === el.getAttribute('data-id'));
+          if (wp) {
+            document.getElementById('favorites-drawer').classList.add('hidden');
+            document.body.style.overflow = '';
+            openStudioModal(wp);
+          }
+        };
+      });
+
+      container.querySelectorAll('.remove-fav-btn').forEach(btn => {
+        btn.onclick = () => toggleFavorite(btn.getAttribute('data-id'));
+      });
+    }
+
+    function initGuideTabs() {
+      const guideData = {
+        win: `
+          <h4 class="font-bold text-white text-sm sm:text-base">Windows 11 & 10 (Lossless 4K Setup)</h4>
+          <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-300">
+            <li>Download the full resolution <strong>3840×2160 (4K UHD)</strong> image using the Studio.</li>
+            <li>Right-click on your Desktop and select <strong>Personalize</strong> &rarr; <strong>Background</strong>.</li>
+            <li>In "Choose a fit", ensure you select <strong>Fill</strong> or <strong>Fit</strong>.</li>
+          </ol>
+        `,
+        mac: `
+          <h4 class="font-bold text-white text-sm sm:text-base">macOS Sequoia & Sonoma (Retina 4K/5K)</h4>
+          <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-300">
+            <li>Save the wallpaper to your <strong>Pictures</strong> folder.</li>
+            <li>Open <strong>System Settings</strong> &rarr; <strong>Wallpaper</strong>.</li>
+            <li>Click <strong>Add Photo</strong> and choose the image.</li>
+          </ol>
+        `,
+        ios: `
+          <h4 class="font-bold text-white text-sm sm:text-base">iPhone & iOS 17 / 18 (OLED Super Retina)</h4>
+          <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-300">
+            <li>Download the <strong>9:16 Mobile OLED</strong> resolution file.</li>
+            <li>Open Photos, tap <strong>Share</strong> &rarr; <strong>Use as Wallpaper</strong>.</li>
+            <li>Turn off <strong>Perspective Zoom</strong> for pixel-perfect alignment.</li>
+          </ol>
+        `,
+        android: `
+          <h4 class="font-bold text-white text-sm sm:text-base">Android 14 & 15</h4>
+          <ol class="list-decimal list-inside space-y-2 text-xs sm:text-sm text-slate-300">
+            <li>Open the photo in Google Photos or Gallery.</li>
+            <li>Tap the menu &rarr; <strong>Set as wallpaper</strong>.</li>
+            <li>Choose <strong>Home and Lock screens</strong>.</li>
+          </ol>
+        `
+      };
+
+      const tabs = document.querySelectorAll('.guide-tab');
+      const content = document.getElementById('guide-content');
+
+      tabs.forEach(tab => {
+        tab.onclick = () => {
+          tabs.forEach(t => {
+            t.classList.remove('border-cyan-500/40', 'bg-cyan-950/30', 'text-white', 'active-guide');
+            t.classList.add('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+          });
+          tab.classList.add('border-cyan-500/40', 'bg-cyan-950/30', 'text-white', 'active-guide');
+          tab.classList.remove('border-slate-800', 'bg-slate-900/60', 'text-slate-400');
+
+          content.innerHTML = guideData[tab.getAttribute('data-os')] || guideData.win;
+        };
+      });
+
+      content.innerHTML = guideData.win;
+    }
+
+    function copyToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        textarea.remove();
+      }
+    }
+  </script>
+
+  <!-- Integrated IndexedDB Database Connection -->
+  <script>
+    const WallpaperDB = (() => {
+      const DB_NAME = 'REALGX_Studio_DB';
+      const DB_VERSION = 1;
+      const STORE_WALLPAPERS = 'wallpapers';
+      let dbInstance = null;
+      let activeObjectURLs = [];
+
+      function openDB() {
+        return new Promise((resolve, reject) => {
+          if (dbInstance) { resolve(dbInstance); return; }
+          const request = indexedDB.open(DB_NAME, DB_VERSION);
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_WALLPAPERS)) {
+              const store = db.createObjectStore(STORE_WALLPAPERS, { keyPath: 'id' });
+              store.createIndex('dateAdded', 'dateAdded', { unique: false });
+              store.createIndex('category', 'category', { unique: false });
+            }
+          };
+          request.onsuccess = (event) => { dbInstance = event.target.result; resolve(dbInstance); };
+          request.onerror = (event) => reject(event.target.error);
+        });
+      }
+
+      function revokeActiveURLs() {
+        activeObjectURLs.forEach((url) => { try { URL.revokeObjectURL(url); } catch (e) {} });
+        activeObjectURLs = [];
+      }
+
+      function createFingerprint(wallpaper, blobSize) {
+        const cleanTitle = (wallpaper.title || '').trim().toLowerCase();
+        return `${cleanTitle}_${wallpaper.res || ''}_${blobSize || 0}`;
+      }
+
+      function compressImageToBlob(srcUrl, maxDimension = 3840, quality = 0.82) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            let width = img.naturalWidth || img.width;
+            let height = img.naturalHeight || img.height;
+            if (width > maxDimension || height > maxDimension) {
+              if (width >= height) { height = Math.round((height * maxDimension) / width); width = maxDimension; } 
+              else { width = Math.round((width * maxDimension) / height); height = maxDimension; }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width; canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            canvas.toBlob((webpBlob) => {
+              if (webpBlob) resolve(webpBlob);
+              else canvas.toBlob((jpgBlob) => resolve(jpgBlob), 'image/jpeg', quality);
+            }, 'image/webp', quality);
+          };
+          img.onerror = () => resolve(null);
+          img.src = srcUrl;
+        });
+      }
+
+      async function saveWallpaper(wallpaper) {
+        const db = await openDB();
+        const recordToSave = { ...wallpaper };
+
+        if (recordToSave.data_uri && !recordToSave.imageBlob) {
+          const compressedBlob = await compressImageToBlob(recordToSave.data_uri);
+          if (compressedBlob) {
+            recordToSave.imageBlob = compressedBlob;
+            const objUrl = URL.createObjectURL(compressedBlob);
+            activeObjectURLs.push(objUrl);
+            wallpaper.data_uri = objUrl;
+            delete recordToSave.data_uri;
+          }
+        }
+
+        recordToSave.fingerprint = createFingerprint(recordToSave, recordToSave.imageBlob ? recordToSave.imageBlob.size : 0);
+
+        const existingRecords = await getRawRecords();
+        const duplicate = existingRecords.find(item => 
+          item.id === recordToSave.id || 
+          (item.fingerprint && item.fingerprint === recordToSave.fingerprint)
+        );
+
+        if (duplicate && duplicate.id !== recordToSave.id) {
+          recordToSave.id = duplicate.id;
+          wallpaper.id = duplicate.id;
+        }
+
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
+          tx.objectStore(STORE_WALLPAPERS).put(recordToSave);
+          tx.oncomplete = () => resolve(recordToSave);
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async function getRawRecords() {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const req = db.transaction(STORE_WALLPAPERS, 'readonly').objectStore(STORE_WALLPAPERS).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async function removeDuplicateRecords() {
+        const db = await openDB();
+        const allRecords = await getRawRecords();
+        if (allRecords.length <= 1) return;
+
+        allRecords.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+        const seenKeys = new Set();
+        const idsToDelete = [];
+
+        for (const item of allRecords) {
+          const size = item.imageBlob ? item.imageBlob.size : (item.data_uri || '').length;
+          const key = `${(item.title || '').trim().toLowerCase()}_${item.res || ''}_${size}`;
+          if (seenKeys.has(key)) idsToDelete.push(item.id);
+          else seenKeys.add(key);
+        }
+
+        if (idsToDelete.length > 0) {
+          await new Promise((resolve) => {
+            const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
+            const store = tx.objectStore(STORE_WALLPAPERS);
+            idsToDelete.forEach((id) => store.delete(id));
+            tx.oncomplete = () => resolve();
+          });
+        }
+      }
+
+      async function getAllWallpapers() {
+        await removeDuplicateRecords();
+        const results = await getRawRecords();
+        revokeActiveURLs();
+
+        results.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+        return results.map((item) => {
+          let viewUrl = item.data_uri;
+          if (item.imageBlob instanceof Blob) {
+            viewUrl = URL.createObjectURL(item.imageBlob);
+            activeObjectURLs.push(viewUrl);
+          }
+          const cleanItem = { ...item, data_uri: viewUrl, isUserUpload: true };
+          delete cleanItem.imageBlob;
+          return cleanItem;
+        });
+      }
+
+      async function deleteWallpaper(id) {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
+          tx.objectStore(STORE_WALLPAPERS).delete(id);
+          tx.oncomplete = () => resolve();
+          tx.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      let migrationDone = false;
+      async function migrateLegacyLocalStorage() {
+        if (migrationDone) return;
+        migrationDone = true;
+        try {
+          const legacy = localStorage.getItem('realgx_user_wallpapers');
+          if (legacy) {
+            localStorage.removeItem('realgx_user_wallpapers');
+            const parsed = JSON.parse(legacy);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              for (const wp of parsed) await saveWallpaper(wp);
+            }
+          }
+        } catch (err) { localStorage.removeItem('realgx_user_wallpapers'); }
+      }
+
+      return { openDB, saveWallpaper, getAllWallpapers, deleteWallpaper, migrateLegacyLocalStorage };
+    })();
+
+    (function integrateWithPage() {
+      let isLoadingDB = false;
+      window.loadUserUploads = async function () {
+        if (isLoadingDB) return;
+        isLoadingDB = true;
+        try {
+          await WallpaperDB.migrateLegacyLocalStorage();
+          const storedWallpapers = await WallpaperDB.getAllWallpapers();
+          const uniqueMap = new Map();
+          storedWallpapers.forEach((wp) => uniqueMap.set(wp.id, wp));
+          userUploads = Array.from(uniqueMap.values());
+          WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
+
+          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
+          if (typeof initHeroSpotlight === 'function') initHeroSpotlight();
+          if (typeof renderCategoryPills === 'function') renderCategoryPills();
+          if (typeof filterAndRenderWallpapers === 'function') filterAndRenderWallpapers();
+        } catch (err) { WALLPAPERS = [...BASE_WALLPAPERS]; } 
+        finally { isLoadingDB = false; }
+      };
+
+      window.saveUserUploads = async function () {
+        try {
+          if (Array.isArray(userUploads) && userUploads.length > 0) {
+            await WallpaperDB.saveWallpaper(userUploads[0]);
+            userUploads = await WallpaperDB.getAllWallpapers();
+            WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
+          }
+          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
+        } catch (err) { if (typeof showToast === 'function') showToast('Database error: Could not save image.', 'error'); }
+      };
+
+      window.deleteUserUpload = async function (id) {
+        const wp = userUploads.find((w) => w.id === id);
+        if (!wp) return;
+        if (!confirm(`Are you sure you want to delete your custom wallpaper "${wp.title}"?`)) return;
+
+        try {
+          await WallpaperDB.deleteWallpaper(id);
+          if (wp.data_uri && wp.data_uri.startsWith('blob:')) URL.revokeObjectURL(wp.data_uri);
+          
+          userUploads = userUploads.filter((w) => w.id !== id);
+          WALLPAPERS = WALLPAPERS.filter((w) => w.id !== id);
+
+          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
+          if (typeof initHeroSpotlight === 'function') initHeroSpotlight();
+          if (typeof renderCategoryPills === 'function') renderCategoryPills();
+          if (typeof filterAndRenderWallpapers === 'function') filterAndRenderWallpapers();
+          if (typeof showToast === 'function') showToast(`Removed "${wp.title}" and freed storage.`, 'info');
+        } catch (err) {}
+      };
+    })();
+  </script>
+</body>
+</html>
