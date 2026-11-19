@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -5,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>REALGX 4K v3.0 Ultra — Free 4K & Mobile Wallpapers Studio</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -471,7 +473,7 @@
       </div>
     </div>
 
-    <div id="wallpapers-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+    <div id="wallpapers-grid" class="columns-1 sm:columns-2 lg:columns-3 gap-5 sm:gap-6">
       <!-- Injected by JavaScript -->
     </div>
   </main>
@@ -995,8 +997,7 @@
         "title": "Neo-Shinjuku 2099",
         "category": "Cyberpunk",
         "device": "desktop",
-        "aspect": "16:9",
-        "res": "3840 x 2160",
+        "aspect": "16:9",        "res": "3840 x 2160",
         "tags": ["Cyberpunk", "Neon", "Cityscape", "Futuristic", "Rain", "Night"],
         "colors": ["#8b5cf6", "#06b6d4", "#090d16"],
         "downloads": "124,580",
@@ -1047,27 +1048,49 @@
     let WALLPAPERS = [...BASE_WALLPAPERS];
     let userUploads = [];
 
+    // SUPABASE CONFIGURATION — replace these two values with your project's URL and publishable/anon key.
+    const SUPABASE_URL = 'https://dhrbmkwijciwpzkwexzq.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_2QsTeB16zaTUTTBOitCz5A_UnOIBpkK';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     async function loadUserUploads() {
-      if (typeof WallpaperDB !== 'undefined') {
-        try {
-          await WallpaperDB.migrateLegacyLocalStorage();
-          userUploads = await WallpaperDB.getAllWallpapers();
-        } catch (err) {
-          console.warn('Database read error:', err);
-        }
+      try {
+        const { data, error } = await supabaseClient
+          .from('wallpapers')
+          .select('id,title,category,preview_url,full_url,created_at')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+
+        userUploads = (data || []).map(row => ({
+          id: String(row.id),
+          title: row.title,
+          category: row.category,
+          device: 'desktop',
+          aspect: '16:9',
+          res: 'Original image',
+          tags: [row.category, '4K', 'Wallpaper'],
+          colors: ['#00f0ff', '#ff007f', '#a855f7'],
+          downloads: '0',
+          description: `${row.title} — ${row.category} wallpaper.`,
+          data_uri: row.preview_url,
+          full_url: row.full_url,
+          isUserUpload: true,
+          dateAdded: new Date(row.created_at).getTime()
+        }));
+
+        // Demo assets are used only when the cloud table is empty.
+        WALLPAPERS = userUploads.length ? [...userUploads] : [...BASE_WALLPAPERS];
+      } catch (err) {
+        console.error('Supabase read error:', err);
+        userUploads = [];
+        WALLPAPERS = [...BASE_WALLPAPERS];
+        setTimeout(() => showToast('Could not load cloud wallpapers. Check your Supabase URL, key, and RLS SELECT policy.', 'error'), 0);
       }
-      WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
       updateUserUploadCount();
     }
 
     async function saveUserUploads() {
-      if (typeof WallpaperDB !== 'undefined' && userUploads.length > 0) {
-        try {
-          await WallpaperDB.saveWallpaper(userUploads[0]);
-        } catch (err) {
-          console.warn('Database save error:', err);
-        }
-      }
+      // Publishing is intentionally handled only by the private admin.html page.
       updateUserUploadCount();
     }
 
@@ -1178,16 +1201,13 @@
     function renderCategoryPills() {
       const container = document.getElementById('category-pills-container');
       const categories = [
-        { id: 'all', label: 'All Wallpapers', icon: '⚡' },
-        { id: 'my-uploads', label: `My Uploads (${userUploads.length})`, icon: '🌟' },
-        { id: 'Cars', label: 'Supercars', icon: '🏎️' },
-        { id: 'Anime', label: 'Anime & Fantasy', icon: '🗡️' },
-        { id: 'JDM', label: 'JDM Drift', icon: '🌸' },
-        { id: 'Cyberpunk', label: 'Cyberpunk', icon: '⚡' },
-        { id: 'OLED', label: 'OLED Blacks', icon: '🖤' },
+        { id: 'all', label: 'All', icon: '⚡' },
+        { id: 'Gaming', label: 'Gaming', icon: '🎮' },
         { id: 'Nature', label: 'Nature', icon: '🌲' },
-        { id: 'Sci-Fi', label: 'Sci-Fi', icon: '🚀' },
-        { id: 'Custom', label: 'Custom', icon: '✨' }
+        { id: 'Anime', label: 'Anime', icon: '🗡️' },
+        { id: 'Cyberpunk', label: 'Cyberpunk', icon: '⚡' },
+        { id: 'Minimalist', label: 'Minimalist', icon: '◻️' },
+        { id: 'Cars', label: 'Cars', icon: '🏎️' }
       ];
 
       container.innerHTML = categories.map(cat => `
@@ -1276,173 +1296,18 @@
     }
 
     function initUploadStudio() {
-      const fileInput = document.getElementById('custom-file-input');
-      const dropzone = document.getElementById('upload-dropzone');
-      const emptyView = document.getElementById('dropzone-empty-view');
-      const previewView = document.getElementById('dropzone-preview-view');
-      const liveImg = document.getElementById('upload-live-preview');
-      const dimBadge = document.getElementById('preview-dimensions-badge');
-      const removeBtn = document.getElementById('remove-preview-btn');
-      const urlInput = document.getElementById('custom-url-input');
-      const loadUrlBtn = document.getElementById('load-url-btn');
-      const titleInput = document.getElementById('custom-title-input');
-      const catSelect = document.getElementById('custom-category-select');
-      const tagsInput = document.getElementById('custom-tags-input');
-      const descInput = document.getElementById('custom-desc-input');
-      const publishBtn = document.getElementById('publish-wallpaper-btn');
-      const resetBtn = document.getElementById('reset-upload-btn');
-      const aspectBtns = document.querySelectorAll('.custom-aspect-btn');
-
-      dropzone.onclick = (e) => {
-        if (e.target !== removeBtn && !removeBtn.contains(e.target)) fileInput.click();
-      };
-
-      ['dragenter', 'dragover'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
-          e.preventDefault();
-          dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
-        });
-      });
-
-      ['dragleave', 'drop'].forEach(eventName => {
-        dropzone.addEventListener(eventName, (e) => {
-          e.preventDefault();
-          dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
-        });
-      });
-
-      dropzone.addEventListener('drop', (e) => {
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-      });
-
-      fileInput.onchange = (e) => {
-        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
-      };
-
-      function processFile(file) {
-        if (!file.type.startsWith('image/')) {
-          showToast('Please select a valid image file (PNG, JPG, WEBP).', 'error');
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = (event) => setUploadImage(event.target.result, file.name.replace(/\.[^/.]+$/, ""));
-        reader.readAsDataURL(file);
-      }
-
-      loadUrlBtn.onclick = () => {
-        const url = urlInput.value.trim();
-        if (!url) { showToast('Please enter an image URL.', 'error'); return; }
-        setUploadImage(url, 'Custom Web Wallpaper');
-      };
-
-      function setUploadImage(src, suggestedTitle) {
-        uploadImageData = src;
-        liveImg.src = src;
-
-        const probeImg = new Image();
-        probeImg.onload = () => {
-          const w = probeImg.naturalWidth || 3840;
-          const h = probeImg.naturalHeight || 2160;
-          uploadDetectedRes = `${w} x ${h}`;
-          dimBadge.textContent = `${w} × ${h} • ${w >= h ? 'Desktop' : 'Mobile'}`;
-
-          if (h > w) selectAspect('9:16');
-          else if (w / h > 2.0) selectAspect('21:9');
-          else selectAspect('16:9');
-
-          if (!titleInput.value.trim() && suggestedTitle) {
-            titleInput.value = suggestedTitle.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          }
-
-          emptyView.classList.add('hidden');
-          previewView.classList.remove('hidden');
-          showToast('Image loaded! You can now customize title and details.', 'success');
-        };
-        probeImg.onerror = () => showToast('Could not load image. Please verify file format or URL.', 'error');
-        probeImg.src = src;
-      }
-
-      removeBtn.onclick = (e) => { e.stopPropagation(); clearUploadPreview(); };
-
-      function clearUploadPreview() {
-        uploadImageData = null;
-        fileInput.value = '';
-        urlInput.value = '';
-        liveImg.src = '';
-        emptyView.classList.remove('hidden');
-        previewView.classList.add('hidden');
-      }
-
-      aspectBtns.forEach(btn => {
-        btn.onclick = () => selectAspect(btn.getAttribute('data-aspect'));
-      });
-
-      function selectAspect(aspect) {
-        uploadDetectedAspect = aspect;
-        aspectBtns.forEach(b => {
-          b.classList.remove('bg-cyan-500', 'text-black');
-          b.classList.add('text-slate-400');
-        });
-        const targetBtn = Array.from(aspectBtns).find(b => b.getAttribute('data-aspect') === aspect);
-        if (targetBtn) {
-          targetBtn.classList.add('bg-cyan-500', 'text-black');
-          targetBtn.classList.remove('text-slate-400');
-        }
-      }
-
-      publishBtn.onclick = async () => {
-        const title = titleInput.value.trim();
-        if (!title) { showToast('Please give your wallpaper a title before publishing!', 'error'); titleInput.focus(); return; }
-        if (!uploadImageData) { showToast('Please select or upload an image file first!', 'error'); return; }
-
-        const category = catSelect.value;
-        const aspect = uploadDetectedAspect;
-        const device = aspect === '9:16' ? 'mobile' : 'desktop';
-        const rawTags = tagsInput.value.trim();
-        const tags = rawTags ? rawTags.split(',').map(t => t.trim()).filter(Boolean) : [category, 'Custom', '4K'];
-        const desc = descInput.value.trim() || `Custom ${title} wallpaper uploaded by user to REALGX Studio.`;
-
-        const newWallpaper = {
-          id: 'user-wp-' + Date.now(),
-          title: title,
-          category: category,
-          device: device,
-          aspect: aspect,
-          res: uploadDetectedRes,
-          tags: tags,
-          colors: ['#00f0ff', '#ff007f', '#a855f7'],
-          downloads: '1',
-          description: desc,
-          data_uri: uploadImageData,
-          isUserUpload: true,
-          dateAdded: Date.now()
-        };
-
-        userUploads.unshift(newWallpaper);
-        await window.saveUserUploads();
-        WALLPAPERS.unshift(newWallpaper);
-
-        clearUploadPreview();
-        titleInput.value = '';
-        tagsInput.value = '';
-        descInput.value = '';
-
-        initHeroSpotlight();
-        renderCategoryPills();
-        filterAndRenderWallpapers();
-        showToast(`🎉 "${title}" saved to database & published!`, 'success');
-
-        const gallerySection = document.getElementById('gallery-section');
-        if (gallerySection) gallerySection.scrollIntoView({ behavior: 'smooth' });
-      };
-
-      resetBtn.onclick = () => {
-        clearUploadPreview();
-        titleInput.value = '';
-        tagsInput.value = '';
-        descInput.value = '';
-        showToast('Upload form cleared.', 'info');
-      };
+      const section = document.getElementById('upload-section');
+      if (!section) return;
+      const oldPanel = section.querySelector('.glass-panel');
+      if (oldPanel) oldPanel.remove();
+      const notice = document.createElement('div');
+      notice.className = 'max-w-7xl mx-auto glass-panel rounded-2xl p-5 sm:p-7 border border-cyan-500/30 text-center';
+      notice.innerHTML = `
+        <div class="text-2xl mb-2">🔐</div>
+        <h3 class="text-lg font-black text-white">Private Creator Studio</h3>
+        <p class="text-xs sm:text-sm text-slate-400 mt-2">Wallpaper publishing is managed from the private admin dashboard. The public gallery is read-only.</p>
+      `;
+      section.querySelector('.max-w-7xl')?.appendChild(notice);
     }
 
     function filterAndRenderWallpapers() {
@@ -1508,7 +1373,7 @@
         const isFav = favorites.includes(w.id);
         const isMobile = w.aspect === '9:16';
         return `
-          <div class="glass-card rounded-2xl overflow-hidden flex flex-col group relative ${w.isUserUpload ? 'border-cyan-500/50 glow-cyan' : ''}">
+          <div class="glass-card rounded-2xl overflow-hidden flex flex-col group relative break-inside-avoid mb-5 ${w.isUserUpload ? 'border-cyan-500/50 glow-cyan' : ''}">
             <div class="relative w-full ${isMobile ? 'aspect-[9/13] sm:aspect-[9/14]' : 'aspect-[16/10]'} overflow-hidden bg-slate-950 cursor-pointer wp-card-trigger" data-id="${w.id}">
               <img src="${w.data_uri}" alt="${w.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
               <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent"></div>
@@ -1523,14 +1388,9 @@
                 <button class="fav-toggle-btn p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700/80 transition-all ${isFav ? 'text-pink-500' : 'text-slate-400 hover:text-pink-400'}" data-id="${w.id}" title="${isFav ? 'Remove Favorite' : 'Save Favorite'}">
                   <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </button>
-                ${w.isUserUpload ? `
-                  <button class="delete-upload-btn p-2 rounded-xl bg-red-950/80 hover:bg-red-800 text-red-300 border border-red-500/40 transition-all" data-id="${w.id}" title="Delete Your Upload">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                  </button>
-                ` : ''}
               </div>
 
-              <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div class="absolute inset-0 flex items-center justify-center opacity-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity pointer-events-none">
                 <span class="px-4 py-2 rounded-xl bg-cyan-500 text-black font-extrabold text-xs shadow-2xl flex items-center gap-1.5 transform scale-95 group-hover:scale-100 transition-transform">
                   <span>🎨</span> Open in Studio
                 </span>
@@ -1827,8 +1687,28 @@
       applyTuningFilter();
     }
 
-    function executeDirectDownload(wp) {
-      executeCanvasDownload(wp, { w: 3840, h: 2160, label: '4K Ultra HD' }, { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 });
+    async function executeDirectDownload(wp) {
+      const url = wp.full_url || wp.data_uri;
+      if (!url) { showToast('No download URL is available for this wallpaper.', 'error'); return; }
+      showToast(`Preparing ${wp.title}...`, 'info');
+      try {
+        const response = await fetch(url, { mode: 'cors' });
+        if (!response.ok) throw new Error(`Download request failed (${response.status})`);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = `REALGX_${(wp.title || 'wallpaper').replace(/[^a-z0-9_-]+/gi, '_')}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        showToast(`Download started: ${wp.title}`, 'success');
+      } catch (error) {
+        // Some image hosts do not permit cross-origin fetch. Open the original file instead.
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Opened the original image in a new tab because direct download was blocked by CORS.', 'info');
+      }
     }
 
     function executeCanvasDownload(wp, res, tuning) {
@@ -1884,7 +1764,7 @@
         link.remove();
       };
 
-      img.src = wp.data_uri;
+      img.src = wp.full_url || wp.data_uri;
     }
 
     function initFavoritesDrawer() {
@@ -2035,236 +1915,17 @@
     }
   </script>
 
-  <!-- Integrated IndexedDB Database Connection -->
+  <!-- Cloud refresh: keep the public gallery current when an admin publishes a wallpaper. -->
   <script>
-    const WallpaperDB = (() => {
-      const DB_NAME = 'REALGX_Studio_DB';
-      const DB_VERSION = 1;
-      const STORE_WALLPAPERS = 'wallpapers';
-      let dbInstance = null;
-      let activeObjectURLs = [];
-
-      function openDB() {
-        return new Promise((resolve, reject) => {
-          if (dbInstance) { resolve(dbInstance); return; }
-          const request = indexedDB.open(DB_NAME, DB_VERSION);
-          request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains(STORE_WALLPAPERS)) {
-              const store = db.createObjectStore(STORE_WALLPAPERS, { keyPath: 'id' });
-              store.createIndex('dateAdded', 'dateAdded', { unique: false });
-              store.createIndex('category', 'category', { unique: false });
-            }
-          };
-          request.onsuccess = (event) => { dbInstance = event.target.result; resolve(dbInstance); };
-          request.onerror = (event) => reject(event.target.error);
-        });
-      }
-
-      function revokeActiveURLs() {
-        activeObjectURLs.forEach((url) => { try { URL.revokeObjectURL(url); } catch (e) {} });
-        activeObjectURLs = [];
-      }
-
-      function createFingerprint(wallpaper, blobSize) {
-        const cleanTitle = (wallpaper.title || '').trim().toLowerCase();
-        return `${cleanTitle}_${wallpaper.res || ''}_${blobSize || 0}`;
-      }
-
-      function compressImageToBlob(srcUrl, maxDimension = 3840, quality = 0.82) {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            let width = img.naturalWidth || img.width;
-            let height = img.naturalHeight || img.height;
-            if (width > maxDimension || height > maxDimension) {
-              if (width >= height) { height = Math.round((height * maxDimension) / width); width = maxDimension; } 
-              else { width = Math.round((width * maxDimension) / height); height = maxDimension; }
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-            canvas.toBlob((webpBlob) => {
-              if (webpBlob) resolve(webpBlob);
-              else canvas.toBlob((jpgBlob) => resolve(jpgBlob), 'image/jpeg', quality);
-            }, 'image/webp', quality);
-          };
-          img.onerror = () => resolve(null);
-          img.src = srcUrl;
-        });
-      }
-
-      async function saveWallpaper(wallpaper) {
-        const db = await openDB();
-        const recordToSave = { ...wallpaper };
-
-        if (recordToSave.data_uri && !recordToSave.imageBlob) {
-          const compressedBlob = await compressImageToBlob(recordToSave.data_uri);
-          if (compressedBlob) {
-            recordToSave.imageBlob = compressedBlob;
-            const objUrl = URL.createObjectURL(compressedBlob);
-            activeObjectURLs.push(objUrl);
-            wallpaper.data_uri = objUrl;
-            delete recordToSave.data_uri;
-          }
-        }
-
-        recordToSave.fingerprint = createFingerprint(recordToSave, recordToSave.imageBlob ? recordToSave.imageBlob.size : 0);
-
-        const existingRecords = await getRawRecords();
-        const duplicate = existingRecords.find(item => 
-          item.id === recordToSave.id || 
-          (item.fingerprint && item.fingerprint === recordToSave.fingerprint)
-        );
-
-        if (duplicate && duplicate.id !== recordToSave.id) {
-          recordToSave.id = duplicate.id;
-          wallpaper.id = duplicate.id;
-        }
-
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
-          tx.objectStore(STORE_WALLPAPERS).put(recordToSave);
-          tx.oncomplete = () => resolve(recordToSave);
-          tx.onerror = (e) => reject(e.target.error);
-        });
-      }
-
-      async function getRawRecords() {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const req = db.transaction(STORE_WALLPAPERS, 'readonly').objectStore(STORE_WALLPAPERS).getAll();
-          req.onsuccess = () => resolve(req.result || []);
-          req.onerror = (e) => reject(e.target.error);
-        });
-      }
-
-      async function removeDuplicateRecords() {
-        const db = await openDB();
-        const allRecords = await getRawRecords();
-        if (allRecords.length <= 1) return;
-
-        allRecords.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
-        const seenKeys = new Set();
-        const idsToDelete = [];
-
-        for (const item of allRecords) {
-          const size = item.imageBlob ? item.imageBlob.size : (item.data_uri || '').length;
-          const key = `${(item.title || '').trim().toLowerCase()}_${item.res || ''}_${size}`;
-          if (seenKeys.has(key)) idsToDelete.push(item.id);
-          else seenKeys.add(key);
-        }
-
-        if (idsToDelete.length > 0) {
-          await new Promise((resolve) => {
-            const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
-            const store = tx.objectStore(STORE_WALLPAPERS);
-            idsToDelete.forEach((id) => store.delete(id));
-            tx.oncomplete = () => resolve();
-          });
-        }
-      }
-
-      async function getAllWallpapers() {
-        await removeDuplicateRecords();
-        const results = await getRawRecords();
-        revokeActiveURLs();
-
-        results.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
-        return results.map((item) => {
-          let viewUrl = item.data_uri;
-          if (item.imageBlob instanceof Blob) {
-            viewUrl = URL.createObjectURL(item.imageBlob);
-            activeObjectURLs.push(viewUrl);
-          }
-          const cleanItem = { ...item, data_uri: viewUrl, isUserUpload: true };
-          delete cleanItem.imageBlob;
-          return cleanItem;
-        });
-      }
-
-      async function deleteWallpaper(id) {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_WALLPAPERS, 'readwrite');
-          tx.objectStore(STORE_WALLPAPERS).delete(id);
-          tx.oncomplete = () => resolve();
-          tx.onerror = (e) => reject(e.target.error);
-        });
-      }
-
-      let migrationDone = false;
-      async function migrateLegacyLocalStorage() {
-        if (migrationDone) return;
-        migrationDone = true;
-        try {
-          const legacy = localStorage.getItem('realgx_user_wallpapers');
-          if (legacy) {
-            localStorage.removeItem('realgx_user_wallpapers');
-            const parsed = JSON.parse(legacy);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              for (const wp of parsed) await saveWallpaper(wp);
-            }
-          }
-        } catch (err) { localStorage.removeItem('realgx_user_wallpapers'); }
-      }
-
-      return { openDB, saveWallpaper, getAllWallpapers, deleteWallpaper, migrateLegacyLocalStorage };
-    })();
-
-    (function integrateWithPage() {
-      let isLoadingDB = false;
-      window.loadUserUploads = async function () {
-        if (isLoadingDB) return;
-        isLoadingDB = true;
-        try {
-          await WallpaperDB.migrateLegacyLocalStorage();
-          const storedWallpapers = await WallpaperDB.getAllWallpapers();
-          const uniqueMap = new Map();
-          storedWallpapers.forEach((wp) => uniqueMap.set(wp.id, wp));
-          userUploads = Array.from(uniqueMap.values());
-          WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
-
-          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
-          if (typeof initHeroSpotlight === 'function') initHeroSpotlight();
-          if (typeof renderCategoryPills === 'function') renderCategoryPills();
-          if (typeof filterAndRenderWallpapers === 'function') filterAndRenderWallpapers();
-        } catch (err) { WALLPAPERS = [...BASE_WALLPAPERS]; } 
-        finally { isLoadingDB = false; }
-      };
-
-      window.saveUserUploads = async function () {
-        try {
-          if (Array.isArray(userUploads) && userUploads.length > 0) {
-            await WallpaperDB.saveWallpaper(userUploads[0]);
-            userUploads = await WallpaperDB.getAllWallpapers();
-            WALLPAPERS = [...userUploads, ...BASE_WALLPAPERS];
-          }
-          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
-        } catch (err) { if (typeof showToast === 'function') showToast('Database error: Could not save image.', 'error'); }
-      };
-
-      window.deleteUserUpload = async function (id) {
-        const wp = userUploads.find((w) => w.id === id);
-        if (!wp) return;
-        if (!confirm(`Are you sure you want to delete your custom wallpaper "${wp.title}"?`)) return;
-
-        try {
-          await WallpaperDB.deleteWallpaper(id);
-          if (wp.data_uri && wp.data_uri.startsWith('blob:')) URL.revokeObjectURL(wp.data_uri);
-          
-          userUploads = userUploads.filter((w) => w.id !== id);
-          WALLPAPERS = WALLPAPERS.filter((w) => w.id !== id);
-
-          if (typeof updateUserUploadCount === 'function') updateUserUploadCount();
-          if (typeof initHeroSpotlight === 'function') initHeroSpotlight();
-          if (typeof renderCategoryPills === 'function') renderCategoryPills();
-          if (typeof filterAndRenderWallpapers === 'function') filterAndRenderWallpapers();
-          if (typeof showToast === 'function') showToast(`Removed "${wp.title}" and freed storage.`, 'info');
-        } catch (err) {}
-      };
-    })();
+    const wallpaperChannel = supabaseClient
+      .channel('public-wallpapers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'wallpapers' }, async () => {
+        await loadUserUploads();
+        initHeroSpotlight();
+        renderCategoryPills();
+        filterAndRenderWallpapers();
+      })
+      .subscribe();
   </script>
 </body>
 </html>
