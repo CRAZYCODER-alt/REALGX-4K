@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>REALGX 4K — Private Admin</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{background:#070913;color:#e2e8f0;font-family:Inter,ui-sans-serif,system-ui}
+    .panel{background:#0d1224;border:1px solid #26334d}
+    .field{background:#080d1b;border:1px solid #334155;color:#fff}
+    .field:focus{outline:2px solid #06b6d4;outline-offset:1px}
+    .drop-active{border-color:#22d3ee!important;background:#083344!important}
+  </style>
+</head>
+<body class="min-h-screen">
+  <header class="border-b border-slate-800 bg-slate-950/80">
+    <div class="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
+      <div><p class="text-cyan-400 text-xs font-bold tracking-[.25em]">REALGX 4K</p><h1 class="text-xl sm:text-2xl font-black">Private Upload Dashboard</h1></div>
+      <button id="signout" class="hidden text-xs font-bold rounded-lg border border-slate-700 px-3 py-2 hover:bg-slate-800">Sign out</button>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <section id="login-panel" class="panel rounded-2xl p-5 sm:p-7 max-w-lg mx-auto">
+      <h2 class="text-lg font-bold">Admin sign in</h2>
+      <p class="text-xs text-slate-400 mt-1 mb-5">Use the admin account created in your Supabase project. Public sign-up is not provided here.</p>
+      <form id="login-form" class="space-y-3">
+        <label class="block text-xs text-slate-300">Email<input id="email" type="email" autocomplete="username" required class="field mt-1 w-full rounded-xl p-3"></label>
+        <label class="block text-xs text-slate-300">Password<input id="password" type="password" autocomplete="current-password" required class="field mt-1 w-full rounded-xl p-3"></label>
+        <button class="w-full rounded-xl bg-gradient-to-r from-cyan-400 to-indigo-500 text-slate-950 font-black py-3">Sign in</button>
+      </form>
+      <p id="login-error" class="text-sm text-red-400 mt-3" role="alert"></p>
+    </section>
+
+    <section id="dashboard" class="hidden space-y-6">
+      <div class="panel rounded-2xl p-5 sm:p-7">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
+          <div><h2 class="text-lg font-black">Publish wallpapers</h2><p class="text-xs text-slate-400 mt-1">Upload PNG, JPG, WEBP or other ImgBB-supported image files. Maximum 3 MB per image on this Vercel upload endpoint.</p></div>
+          <span id="admin-status" class="text-[11px] text-emerald-300 border border-emerald-500/30 bg-emerald-950/30 rounded-full px-3 py-1">Admin authenticated</span>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4">
+          <label class="text-xs font-semibold text-slate-300">Title (optional; used for a single file)
+            <input id="title" class="field mt-1 w-full rounded-xl p-3" placeholder="Leave blank to use filename">
+          </label>
+          <label class="text-xs font-semibold text-slate-300">Category
+            <select id="category" class="field mt-1 w-full rounded-xl p-3">
+              <option>Gaming</option><option>Nature</option><option>Anime</option><option>Cyberpunk</option><option>Minimalist</option><option>Cars</option>
+            </select>
+          </label>
+        </div>
+        <div id="dropzone" class="mt-5 rounded-2xl border-2 border-dashed border-slate-600 bg-slate-950/50 p-8 text-center cursor-pointer hover:border-cyan-400 transition">
+          <input id="files" type="file" accept="image/*" multiple class="hidden">
+          <div class="text-3xl mb-2">☁️</div><p class="font-bold">Drop images here or click to browse</p>
+          <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
+          <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
+        </div>
+        <div class="mt-4 flex flex-col sm:flex-row gap-3 items-center">
+          <button id="upload-btn" class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-cyan-400 to-pink-500 text-slate-950 font-black px-6 py-3">Upload selected wallpapers</button>
+          <span id="progress-label" class="text-xs text-slate-400" aria-live="polite">Waiting for files</span>
+        </div>
+        <div class="mt-3 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-cyan-400 w-0 transition-all"></div></div>
+        <div id="upload-log" class="mt-4 space-y-2 text-xs" aria-live="polite"></div>
+      </div>
+
+      <div class="panel rounded-2xl p-5 sm:p-7">
+        <div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="text-lg font-black">Published wallpapers</h2><p class="text-xs text-slate-400">Delete removes the gallery record. It does not delete the file from ImgBB.</p></div><button id="refresh" class="text-xs border border-slate-700 rounded-lg px-3 py-2 hover:bg-slate-800">Refresh</button></div>
+        <div id="wallpaper-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"><p class="text-xs text-slate-500">Loading…</p></div>
+      </div>
+    </section>
+    <p class="text-center text-[11px] text-slate-600">Uploads are handled by a protected server endpoint. Only authorized admins can publish wallpapers.</p>
+  </main>
+
+<script>
+  // SUPABASE CONFIGURATION — paste your project URL and publishable/anon key here.
+  const SUPABASE_URL = 'https://dhrbmkwijciwpzkwexzq.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_2QsTeB16zaTUTTBOitCz5A_UnOIBpkK';
+
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const $ = id => document.getElementById(id);
+  let selectedFiles = [];
+
+  function log(message, kind='info') {
+    const p = document.createElement('p');
+    p.className = kind === 'error' ? 'text-red-400' : kind === 'success' ? 'text-emerald-300' : 'text-slate-300';
+    p.textContent = message;
+    $('upload-log').prepend(p);
+  }
+  function progress(done,total,label) {
+    const pct = total ? Math.round(done/total*100) : 0;
+    $('progress-bar').style.width = pct + '%';
+    $('progress-label').textContent = label || `${done} of ${total}`;
+  }
+  function safeError(error) {
+    const msg = error?.message || String(error);
+    if (/invalid api key|key.*invalid|authentication/i.test(msg)) return 'The image upload service rejected its server-side API key. Check the IMGBB_API_KEY environment variable in Vercel.';
+    if (/row-level security|permission denied|violates row-level/i.test(msg)) return 'Supabase denied this action. Confirm the signed-in user has app_metadata.role = "admin" and the SQL policies are installed.';
+    return msg;
+  }
+  function renderSelected() {
+    $('file-summary').textContent = selectedFiles.length
+      ? selectedFiles.map(f => `${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join(' · ')
+      : 'No files selected';
+  }
+  function setFiles(files) {
+    selectedFiles = Array.from(files || []).filter(f => f.type.startsWith('image/'));
+    renderSelected();
+    if (selectedFiles.length !== Array.from(files || []).length) log('Non-image files were ignored.', 'error');
+  }
+
+  $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
+  $('files').addEventListener('change', e => setFiles(e.target.files));
+  ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name, e => {
+    e.preventDefault(); $('dropzone').classList.add('drop-active');
+  }));
+  ['dragleave','drop'].forEach(name => $('dropzone').addEventListener(name, e => {
+    e.preventDefault(); $('dropzone').classList.remove('drop-active');
+  }));
+  $('dropzone').addEventListener('drop', e => setFiles(e.dataTransfer.files));
+
+  async function requireAdmin(user) {
+    if (!user || user.app_metadata?.role !== 'admin') {
+      await supabaseClient.auth.signOut();
+      $('login-error').textContent = 'This account is not authorized. Ask the project owner to set app_metadata.role to admin.';
+      return false;
+    }
+    $('login-panel').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
+    $('signout').classList.remove('hidden');
+    await loadWallpapers();
+    return true;
+  }
+
+  $('login-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    $('login-error').textContent = '';
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email: $('email').value.trim(), password: $('password').value
+    });
+    if (error) { $('login-error').textContent = safeError(error); return; }
+    await requireAdmin(data.user);
+  });
+  $('signout').addEventListener('click', async () => {
+    await supabaseClient.auth.signOut();
+    $('dashboard').classList.add('hidden');
+    $('signout').classList.add('hidden');
+    $('login-panel').classList.remove('hidden');
+  });
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = String(reader.result || '');
+        resolve(result.slice(result.indexOf(',') + 1));
+      };
+      reader.onerror = () => reject(new Error(`Could not read ${file.name}.`));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadToImgBB(file) {
+    // Vercel Functions enforce a 4.5 MB request-body limit. Base64 adds overhead,
+    // so keep each source image at 3 MB to leave room for JSON and metadata.
+    if (file.size > 3 * 1024 * 1024) throw new Error(`${file.name} exceeds the 3 MB hosted upload limit. Resize/compress it before uploading.`);
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
+    const response = await fetch('https://dhrbmkwijciwpzkwexzq.supabase.co/functions/v1/imgbb-upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type || 'application/octet-stream',
+        imageBase64: await fileToBase64(file)
+      })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.success || !result.preview_url || !result.full_url) {
+      throw new Error(result.error || `Secure upload failed (HTTP ${response.status}).`);
+    }
+    return { preview_url: result.preview_url, full_url: result.full_url };
+  }
+
+  $('upload-btn').addEventListener('click', async () => {
+    if (!selectedFiles.length) { log('Choose at least one image first.', 'error'); return; }
+    $('upload-btn').disabled = true;
+    let done = 0, failures = 0;
+    progress(0, selectedFiles.length, 'Starting uploads…');
+    for (const file of selectedFiles) {
+      try {
+        log(`Uploading ${file.name}…`);
+        const urls = await uploadToImgBB(file);
+        const typedTitle = $('title').value.trim();
+        const title = (selectedFiles.length === 1 && typedTitle)
+          ? typedTitle
+          : file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const { error } = await supabaseClient.from('wallpapers').insert({
+          title, category: $('category').value,
+          preview_url: urls.preview_url, full_url: urls.full_url
+        });
+        if (error) throw error;
+        log(`Published: ${title}`, 'success');
+      } catch (error) {
+        failures++;
+        log(`${file.name}: ${safeError(error)}`, 'error');
+      } finally {
+        done++;
+        progress(done, selectedFiles.length, `${done}/${selectedFiles.length} processed`);
+      }
+    }
+    selectedFiles = [];
+    $('files').value = '';
+    $('title').value = '';
+    renderSelected();
+    $('upload-btn').disabled = false;
+    log(`Finished. ${done-failures} uploaded, ${failures} failed.`, failures ? 'error' : 'success');
+    await loadWallpapers();
+  });
+
+  async function loadWallpapers() {
+    $('wallpaper-list').innerHTML = '<p class="text-xs text-slate-500">Loading…</p>';
+    const { data, error } = await supabaseClient.from('wallpapers')
+      .select('id,title,category,preview_url,full_url,created_at').order('created_at', {ascending:false});
+    if (error) { $('wallpaper-list').textContent = safeError(error); return; }
+    if (!data.length) { $('wallpaper-list').innerHTML = '<p class="text-xs text-slate-500">No wallpapers published yet.</p>'; return; }
+    $('wallpaper-list').innerHTML = '';
+    data.forEach(row => {
+      const card = document.createElement('article');
+      card.className = 'rounded-xl overflow-hidden border border-slate-700 bg-slate-950';
+      const img = document.createElement('img');
+      img.src = row.preview_url; img.alt = row.title; img.loading = 'lazy';
+      img.className = 'w-full aspect-video object-cover';
+      const body = document.createElement('div'); body.className = 'p-3';
+      const title = document.createElement('p'); title.className = 'font-bold text-sm'; title.textContent = row.title;
+      const cat = document.createElement('p'); cat.className = 'text-xs text-cyan-300 mt-1'; cat.textContent = row.category;
+      const del = document.createElement('button'); del.className = 'mt-3 text-xs font-bold text-red-300 border border-red-500/30 rounded-lg px-3 py-2 hover:bg-red-950';
+      del.textContent = 'Delete listing';
+      del.addEventListener('click', async () => {
+        if (!confirm(`Remove "${row.title}" from the REALGX gallery? This will not delete the ImgBB file.`)) return;
+        const { error: deleteError } = await supabaseClient.from('wallpapers').delete().eq('id', row.id);
+        if (deleteError) log(`Delete failed: ${safeError(deleteError)}`, 'error');
+        else { log(`Removed ${row.title} from the gallery.`, 'success'); await loadWallpapers(); }
+      });
+      body.append(title, cat, del); card.append(img, body); $('wallpaper-list').append(card);
+    });
+  }
+  $('refresh').addEventListener('click', loadWallpapers);
+
+  (async () => {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session?.user) await requireAdmin(session.user);
+  })();
+</script>
+</body>
+</html>
