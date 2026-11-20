@@ -1645,7 +1645,7 @@
     }
 
     function applyPhoneView() {
-      const image = document.getElementById('phone-main-wallpaper-img');
+      const image = document.getElementById('mockup-wallpaper-img');
       if (!image) return;
       image.style.transform = `translate(${phoneView.x}%, ${phoneView.y}%) scale(${phoneView.zoom})`;
     }
@@ -1714,8 +1714,7 @@
             </div>
             <div class="w-full h-full rounded-[24px] sm:rounded-[28px] overflow-hidden relative bg-slate-950">
               <img src="${uri}" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover scale-110 blur-xl brightness-50">
-              <img id="mockup-wallpaper-img" src="${uri}" alt="OLED Phone Screen" class="hidden">
-              <img id="phone-main-wallpaper-img" src="${uri}" alt="OLED Phone Screen preview" class="absolute inset-0 w-full h-full object-contain transition-transform duration-100" style="transform:translate(0%, 0%) scale(1)">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="OLED Phone Screen preview" class="absolute inset-0 w-full h-full object-contain transition-transform duration-100" style="transform:translate(0%, 0%) scale(1)">
               <div class="absolute top-9 sm:top-10 inset-x-0 text-center text-white drop-shadow-lg pointer-events-none">
                 <div class="text-2xl sm:text-3xl font-black tracking-tight">08:45</div>
                 <div class="text-[9px] sm:text-[10px] font-medium opacity-80">Saturday, October 17</div>
