@@ -1725,7 +1725,7 @@
       image.style.height = `${rotated ? rect.width : rect.height}px`;
       image.style.maxWidth = 'none';
       image.style.maxHeight = 'none';
-      image.style.objectFit = 'contain';
+      image.style.objectFit = imageView.autoFitRotate !== false ? 'contain' : 'cover';
       image.style.transformOrigin = 'center center';
       const offsetX = (Number(imageView.x) / 100) * rect.width;
       const offsetY = (Number(imageView.y) / 100) * rect.height;
@@ -1906,7 +1906,9 @@
         const rotated = autoRotation !== 0;
         const effectiveW = rotated ? img.height : img.width;
         const effectiveH = rotated ? img.width : img.height;
-        const fitRatio = Math.min(canvas.width / effectiveW, canvas.height / effectiveH);
+        const fitRatio = view.autoFitRotate === false
+          ? Math.max(canvas.width / effectiveW, canvas.height / effectiveH)
+          : Math.min(canvas.width / effectiveW, canvas.height / effectiveH);
         const drawW = img.width * fitRatio * (view.zoom || 1);
         const drawH = img.height * fitRatio * (view.zoom || 1);
         ctx.save();
