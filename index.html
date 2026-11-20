@@ -588,7 +588,7 @@
                 <h4 class="text-xs font-black text-cyan-300 uppercase tracking-wider">Image framing & rotation</h4>
                 <p class="text-[10px] text-slate-400 mt-0.5">Adjust zoom, position, and rotation in every preview mode.</p>
               </div>
-              <button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset view</button>
+              <div class="flex items-center gap-2"><button id="rotate-left-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↶ 90°</button><button id="rotate-right-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↷ 90°</button><button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset</button></div>
             </div>
             <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
               <label class="flex items-center gap-2 text-slate-200 cursor-pointer select-none">
@@ -596,9 +596,9 @@
                 <span class="font-semibold text-cyan-300">Auto fit to screen</span>
               </label>
               <label class="flex items-center gap-2 text-slate-200 cursor-pointer select-none">
-                <input id="image-auto-rotate" type="checkbox" class="h-4 w-4 accent-purple-400">
-                <span class="font-semibold text-purple-300">Auto rotate 90°</span>
-                <span class="text-[10px] text-slate-400">Optional</span>
+                <input id="image-auto-rotate" type="checkbox" checked class="h-4 w-4 accent-purple-400">
+                <span class="font-semibold text-purple-300">Auto rotate to match screen</span>
+                <span class="text-[10px] text-slate-400">Preserves full image</span>
               </label>
               <span class="text-[10px] text-slate-400">Drag the image to reposition it, or use the sliders below.</span>
             </div>
@@ -1150,7 +1150,7 @@
 
     let activeStudioWallpaper = null;
     let activeMockupFrame = 'clean';
-    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: false };
+    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
 
@@ -1592,6 +1592,14 @@
           applyImageView();
         };
       });
+      document.getElementById('rotate-left-90').onclick = () => {
+        imageView.rotation = ((Number(imageView.rotation || 0) - 90 + 360) % 360);
+        updateImageViewControls(); applyImageView();
+      };
+      document.getElementById('rotate-right-90').onclick = () => {
+        imageView.rotation = ((Number(imageView.rotation || 0) + 90) % 360);
+        updateImageViewControls(); applyImageView();
+      };
       document.getElementById('reset-image-view').onclick = resetImageView;
 
       ['brightness', 'contrast', 'saturation', 'hue', 'blur'].forEach(prop => {
@@ -1690,7 +1698,7 @@
     }
 
     function resetImageView() {
-      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: false };
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
       const autoFitToggle = document.getElementById('image-auto-fit-rotate');
       if (autoFitToggle) autoFitToggle.checked = true;
       const autoRotateToggle = document.getElementById('image-auto-rotate');
@@ -1733,7 +1741,8 @@
       image.style.cursor = 'grab';
       image.style.touchAction = 'none';
       image.style.userSelect = 'none';
-      image.style.transform = `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0) rotate(${autoRotation + Number(imageView.rotation || 0)}deg) scale(${imageView.zoom || 1})`;
+      const effectiveRotation = Number(imageView.rotation || 0) !== 0 ? Number(imageView.rotation) : autoRotation;
+      image.style.transform = `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0) rotate(${effectiveRotation}deg) scale(${imageView.zoom || 1})`;
     }
 
     function renderWallpaperPalette(wp) {
@@ -1913,7 +1922,8 @@
         const drawH = img.height * fitRatio * (view.zoom || 1);
         ctx.save();
         ctx.translate(canvas.width / 2 + ((view.x || 0) / 100) * canvas.width, canvas.height / 2 + ((view.y || 0) / 100) * canvas.height);
-        ctx.rotate(((autoRotation + (view.rotation || 0)) * Math.PI) / 180);
+        const effectiveRotation = Number(view.rotation || 0) !== 0 ? Number(view.rotation) : autoRotation;
+        ctx.rotate((effectiveRotation * Math.PI) / 180);
         ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
