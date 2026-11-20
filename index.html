@@ -590,7 +590,7 @@
               </div>
               <button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset view</button>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <label class="block text-slate-300">Zoom <span id="image-zoom-value" class="text-cyan-300 font-mono">100%</span>
                 <input id="image-zoom" type="range" min="50" max="250" step="1" value="100" class="w-full mt-1 accent-cyan-400">
               </label>
@@ -1138,7 +1138,7 @@
 
     let activeStudioWallpaper = null;
     let activeMockupFrame = 'clean';
-    let imageView = { zoom: 1, x: 0, y: 0 };
+    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0 };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
 
@@ -1528,7 +1528,7 @@
       });
 
       ['zoom', 'x', 'y', 'rotation'].forEach(axis => {
-        const slider = document.getElementById(`phone-${axis}`);
+        const slider = document.getElementById(`image-${axis}`);
         slider.oninput = () => {
           imageView[axis] = axis === 'zoom' ? Number(slider.value) / 100 : Number(slider.value);
           updateImageViewControls();
@@ -1795,28 +1795,23 @@
 
         const hRatio = canvas.width / img.width;
         const vRatio = canvas.height / img.height;
-        if (res.h > res.w) {
-          // Mobile export: blurred cover fills the canvas while the full image is fitted above it.
-          const coverRatio = Math.max(hRatio, vRatio);
-          const coverW = img.width * coverRatio;
-          const coverH = img.height * coverRatio;
-          ctx.save();
-          ctx.filter = 'blur(42px) brightness(0.55)';
-          ctx.drawImage(img, (canvas.width - coverW) / 2 - 90, (canvas.height - coverH) / 2 - 90, coverW + 180, coverH + 180);
+        const portrait = res.h > res.w;
+        const coverRatio = Math.max(hRatio, vRatio);
+        const coverW = img.width * coverRatio, coverH = img.height * coverRatio;
+        if (portrait) {
+          ctx.save(); ctx.filter = 'blur(42px) brightness(0.55)';
+          ctx.drawImage(img, (canvas.width-coverW)/2-90, (canvas.height-coverH)/2-90, coverW+180, coverH+180);
           ctx.restore();
-          ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
-          const fitRatio = Math.min(hRatio, vRatio) * view.zoom;
-          const fitW = img.width * fitRatio;
-          const fitH = img.height * fitRatio;
-          const drawX = (canvas.width - fitW) / 2 + (view.x / 100) * canvas.width;
-          const drawY = (canvas.height - fitH) / 2 + (view.y / 100) * canvas.height;
-          ctx.save(); ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height); ctx.rotate((view.rotation || 0) * Math.PI / 180); ctx.drawImage(img, -fitW/2, -fitH/2, fitW, fitH); ctx.restore();
-        } else {
-          const ratio = Math.max(hRatio, vRatio);
-          const centerShiftX = (canvas.width - img.width * ratio) / 2;
-          const centerShiftY = (canvas.height - img.height * ratio) / 2;
-          const drawW = img.width * ratio * (view.zoom || 1), drawH = img.height * ratio * (view.zoom || 1); ctx.save(); ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height); ctx.rotate((view.rotation || 0) * Math.PI / 180); ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH); ctx.restore();
         }
+        ctx.save();
+        ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height);
+        ctx.rotate((view.rotation || 0) * Math.PI / 180);
+        const baseRatio = portrait ? Math.min(hRatio, vRatio) : coverRatio;
+        const scale = baseRatio * (view.zoom || 1);
+        const drawW = img.width * scale, drawH = img.height * scale;
+        ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
+        ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+        ctx.restore();
 
         try {
           const downloadUrl = canvas.toDataURL('image/jpeg', 0.95);
