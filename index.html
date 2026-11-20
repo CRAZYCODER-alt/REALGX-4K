@@ -590,6 +590,11 @@
               </div>
               <button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset view</button>
             </div>
+            <label class="flex items-center gap-2 text-xs text-slate-200 cursor-pointer select-none">
+              <input id="image-auto-fit-rotate" type="checkbox" checked class="h-4 w-4 accent-cyan-400">
+              <span class="font-semibold text-cyan-300">Auto fit & rotate</span>
+              <span class="text-[10px] text-slate-400">Automatically match the wallpaper to the selected screen</span>
+            </label>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <label class="block text-slate-300">Zoom <span id="image-zoom-value" class="text-cyan-300 font-mono">100%</span>
                 <input id="image-zoom" type="range" min="50" max="250" step="1" value="100" class="w-full mt-1 accent-cyan-400">
@@ -1138,7 +1143,7 @@
 
     let activeStudioWallpaper = null;
     let activeMockupFrame = 'clean';
-    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0 };
+    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
 
@@ -1527,6 +1532,12 @@
         tab.onclick = () => setMockupTab(tab.getAttribute('data-frame'));
       });
 
+      const autoFitToggle = document.getElementById('image-auto-fit-rotate');
+      if (autoFitToggle) {
+        autoFitToggle.checked = imageView.autoFitRotate !== false;
+        autoFitToggle.onchange = () => { imageView.autoFitRotate = autoFitToggle.checked; applyImageView(); };
+      }
+
       ['zoom', 'x', 'y', 'rotation'].forEach(axis => {
         const slider = document.getElementById(`image-${axis}`);
         slider.oninput = () => {
@@ -1633,26 +1644,45 @@
     }
 
     function resetImageView() {
-      imageView = { zoom: 1, x: 0, y: 0, rotation: 0 };
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true };
+      const autoFitToggle = document.getElementById('image-auto-fit-rotate');
+      if (autoFitToggle) autoFitToggle.checked = true;
       updateImageViewControls();
       applyImageView();
     }
 
+    function getAutoFitRotation(sourceWidth, sourceHeight, targetWidth, targetHeight, enabled = true) {
+      if (!enabled || !sourceWidth || !sourceHeight || !targetWidth || !targetHeight) return 0;
+      return (sourceHeight > sourceWidth) !== (targetHeight > targetWidth) ? 90 : 0;
+    }
+
     function applyImageView() {
       const image = document.getElementById('mockup-wallpaper-img');
-      if (!image) return;
-
-      // Position against the preview stage in pixels, not percentages of the
-      // image element. This makes the X/Y controls move the wallpaper across
-      // the actual screen area consistently in Master, PC, Phone and Ultra-wide.
+      if (!image || !image.parentElement) return;
       const stage = image.parentElement;
-      const rect = stage ? stage.getBoundingClientRect() : image.getBoundingClientRect();
+      const rect = stage.getBoundingClientRect();
+      if (!rect.width || !rect.height || !image.naturalWidth || !image.naturalHeight) {
+        image.onload = () => applyImageView();
+        return;
+      }
+      const autoRotation = getAutoFitRotation(
+        image.naturalWidth, image.naturalHeight, rect.width, rect.height,
+        imageView.autoFitRotate !== false && activeMockupFrame !== 'clean'
+      );
+      const rotated = autoRotation !== 0;
+      image.style.position = 'absolute';
+      image.style.left = '50%';
+      image.style.top = '50%';
+      image.style.width = `${rotated ? rect.height : rect.width}px`;
+      image.style.height = `${rotated ? rect.width : rect.height}px`;
+      image.style.maxWidth = 'none';
+      image.style.maxHeight = 'none';
+      image.style.objectFit = 'contain';
+      image.style.transformOrigin = 'center center';
       const offsetX = (Number(imageView.x) / 100) * rect.width;
       const offsetY = (Number(imageView.y) / 100) * rect.height;
-
-      image.style.transformOrigin = 'center center';
       image.style.willChange = 'transform';
-      image.style.transform = `translate3d(${offsetX}px, ${offsetY}px, 0) rotate(${imageView.rotation || 0}deg) scale(${imageView.zoom || 1})`;
+      image.style.transform = `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0) rotate(${autoRotation + Number(imageView.rotation || 0)}deg) scale(${imageView.zoom || 1})`;
     }
 
     function renderWallpaperPalette(wp) {
@@ -1765,6 +1795,8 @@
       }
 
       viewport.innerHTML = innerContent;
+      const previewImage = document.getElementById('mockup-wallpaper-img');
+      if (previewImage) previewImage.onload = () => { applyImageView(); applyTuningFilter(); };
       applyTuningFilter();
       applyImageView();
     }
@@ -1818,16 +1850,17 @@
         ctx.drawImage(img, (canvas.width - coverW) / 2 - 100, (canvas.height - coverH) / 2 - 100, coverW + 200, coverH + 200);
         ctx.restore();
 
-        // Foreground always uses CONTAIN, so portrait wallpapers remain fully visible on PC.
-        const fitRatio = Math.min(hRatio, vRatio);
+        // Match source orientation to the selected export orientation when Auto fit & rotate is enabled.
+        const autoRotation = getAutoFitRotation(img.width, img.height, canvas.width, canvas.height, view.autoFitRotate !== false);
+        const rotated = autoRotation !== 0;
+        const effectiveW = rotated ? img.height : img.width;
+        const effectiveH = rotated ? img.width : img.height;
+        const fitRatio = Math.min(canvas.width / effectiveW, canvas.height / effectiveH);
         const drawW = img.width * fitRatio * (view.zoom || 1);
         const drawH = img.height * fitRatio * (view.zoom || 1);
         ctx.save();
-        ctx.translate(
-          canvas.width / 2 + ((view.x || 0) / 100) * canvas.width,
-          canvas.height / 2 + ((view.y || 0) / 100) * canvas.height
-        );
-        ctx.rotate(((view.rotation || 0) * Math.PI) / 180);
+        ctx.translate(canvas.width / 2 + ((view.x || 0) / 100) * canvas.width, canvas.height / 2 + ((view.y || 0) / 100) * canvas.height);
+        ctx.rotate(((autoRotation + (view.rotation || 0)) * Math.PI) / 180);
         ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
