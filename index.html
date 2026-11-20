@@ -582,23 +582,26 @@
             <!-- Dynamic device container populated by JS -->
           </div>
 
-          <div id="phone-view-controls" class="hidden mt-3 p-3 sm:p-4 rounded-xl border border-cyan-500/25 bg-slate-900/70 space-y-3">
+          <div id="image-view-controls" class="mt-3 p-3 sm:p-4 rounded-xl border border-cyan-500/25 bg-slate-900/70 space-y-3">
             <div class="flex items-center justify-between gap-2">
               <div>
-                <h4 class="text-xs font-black text-cyan-300 uppercase tracking-wider">Phone framing</h4>
-                <p class="text-[10px] text-slate-400 mt-0.5">Fit the full image, then move and zoom to frame your subject.</p>
+                <h4 class="text-xs font-black text-cyan-300 uppercase tracking-wider">Image framing & rotation</h4>
+                <p class="text-[10px] text-slate-400 mt-0.5">Adjust zoom, position, and rotation in every preview mode.</p>
               </div>
-              <button id="reset-phone-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset view</button>
+              <button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset view</button>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-              <label class="block text-slate-300">Zoom <span id="phone-zoom-value" class="text-cyan-300 font-mono">100%</span>
-                <input id="phone-zoom" type="range" min="50" max="200" step="1" value="100" class="w-full mt-1 accent-cyan-400">
+              <label class="block text-slate-300">Zoom <span id="image-zoom-value" class="text-cyan-300 font-mono">100%</span>
+                <input id="image-zoom" type="range" min="50" max="250" step="1" value="100" class="w-full mt-1 accent-cyan-400">
               </label>
-              <label class="block text-slate-300">Horizontal <span id="phone-x-value" class="text-cyan-300 font-mono">0</span>
-                <input id="phone-x" type="range" min="-50" max="50" step="1" value="0" class="w-full mt-1 accent-cyan-400">
+              <label class="block text-slate-300">Rotation <span id="image-rotation-value" class="text-cyan-300 font-mono">0°</span>
+                <input id="image-rotation" type="range" min="-180" max="180" step="1" value="0" class="w-full mt-1 accent-purple-400">
               </label>
-              <label class="block text-slate-300">Vertical <span id="phone-y-value" class="text-cyan-300 font-mono">0</span>
-                <input id="phone-y" type="range" min="-50" max="50" step="1" value="0" class="w-full mt-1 accent-cyan-400">
+              <label class="block text-slate-300">Horizontal <span id="image-x-value" class="text-cyan-300 font-mono">0</span>
+                <input id="image-x" type="range" min="-100" max="100" step="1" value="0" class="w-full mt-1 accent-cyan-400">
+              </label>
+              <label class="block text-slate-300">Vertical <span id="image-y-value" class="text-cyan-300 font-mono">0</span>
+                <input id="image-y" type="range" min="-100" max="100" step="1" value="0" class="w-full mt-1 accent-cyan-400">
               </label>
             </div>
           </div>
@@ -1135,7 +1138,7 @@
 
     let activeStudioWallpaper = null;
     let activeMockupFrame = 'clean';
-    let phoneView = { zoom: 1, x: 0, y: 0 };
+    let imageView = { zoom: 1, x: 0, y: 0 };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
 
@@ -1524,15 +1527,15 @@
         tab.onclick = () => setMockupTab(tab.getAttribute('data-frame'));
       });
 
-      ['zoom', 'x', 'y'].forEach(axis => {
+      ['zoom', 'x', 'y', 'rotation'].forEach(axis => {
         const slider = document.getElementById(`phone-${axis}`);
         slider.oninput = () => {
-          phoneView[axis] = axis === 'zoom' ? Number(slider.value) / 100 : Number(slider.value);
-          updatePhoneViewControls();
-          applyPhoneView();
+          imageView[axis] = axis === 'zoom' ? Number(slider.value) / 100 : Number(slider.value);
+          updateImageViewControls();
+          applyImageView();
         };
       });
-      document.getElementById('reset-phone-view').onclick = resetPhoneView;
+      document.getElementById('reset-image-view').onclick = resetImageView;
 
       ['brightness', 'contrast', 'saturation', 'hue', 'blur'].forEach(prop => {
         const slider = document.getElementById(`slider-${prop}`);
@@ -1566,7 +1569,7 @@
       });
 
       downloadExecuteBtn.onclick = () => {
-        if (activeStudioWallpaper) executeCanvasDownload(activeStudioWallpaper, currentExportResolution, currentTuning, phoneView);
+        if (activeStudioWallpaper) executeCanvasDownload(activeStudioWallpaper, currentExportResolution, currentTuning, imageView);
       };
 
       document.getElementById('modal-fav-toggle').onclick = () => {
@@ -1586,20 +1589,9 @@
       const tagsContainer = document.getElementById('modal-tags');
       tagsContainer.innerHTML = wp.tags.map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] text-cyan-300 font-mono">#${t}</span>`).join('');
 
-      const paletteContainer = document.getElementById('modal-palette-container');
-      const colors = wp.colors && wp.colors.length ? wp.colors : ['#00f0ff', '#ff007f', '#a855f7'];
-      paletteContainer.innerHTML = colors.map(c => `
-        <button class="palette-swatch flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-400 transition-colors text-[10px] font-mono text-slate-300" data-hex="${c}" title="Copy ${c}">
-          <span class="w-3.5 h-3.5 rounded-full" style="background-color: ${c}"></span>
-          <span>${c}</span>
-        </button>
-      `).join('');
+      renderWallpaperPalette(wp);
 
-      paletteContainer.querySelectorAll('.palette-swatch').forEach(sw => {
-        sw.onclick = () => { copyToClipboard(sw.getAttribute('data-hex')); showToast(`Copied ${sw.getAttribute('data-hex')} to clipboard!`, 'success'); };
-      });
-
-      resetPhoneView();
+      resetImageView();
       if (wp.aspect === '9:16') setMockupTab('phone');
       else if (wp.aspect === '21:9') setMockupTab('ultrawide');
       else setMockupTab('clean');
@@ -1620,36 +1612,60 @@
         t.classList.toggle('active-mockup', isMatch);
         t.classList.toggle('text-slate-400', !isMatch);
       });
-      const controls = document.getElementById('phone-view-controls');
-      if (controls) controls.classList.toggle('hidden', frame !== 'phone');
       renderMockupViewport();
     }
 
-    function updatePhoneViewControls() {
-      const zoom = document.getElementById('phone-zoom');
-      const x = document.getElementById('phone-x');
-      const y = document.getElementById('phone-y');
+    function updateImageViewControls() {
+      const zoom = document.getElementById('image-zoom');
+      const x = document.getElementById('image-x');
+      const y = document.getElementById('image-y');
+      const rotation = document.getElementById('image-rotation');
       if (!zoom || !x || !y) return;
-      zoom.value = Math.round(phoneView.zoom * 100);
-      x.value = phoneView.x;
-      y.value = phoneView.y;
-      document.getElementById('phone-zoom-value').textContent = `${Math.round(phoneView.zoom * 100)}%`;
-      document.getElementById('phone-x-value').textContent = phoneView.x;
-      document.getElementById('phone-y-value').textContent = phoneView.y;
+      zoom.value = Math.round(imageView.zoom * 100);
+      x.value = imageView.x;
+      y.value = imageView.y;
+      document.getElementById('image-zoom-value').textContent = `${Math.round(imageView.zoom * 100)}%`;
+      document.getElementById('image-x-value').textContent = imageView.x;
+      document.getElementById('image-y-value').textContent = imageView.y;
+      if (rotation) rotation.value = imageView.rotation || 0;
+      const rotationLabel = document.getElementById('image-rotation-value');
+      if (rotationLabel) rotationLabel.textContent = `${imageView.rotation || 0}°`;
     }
 
-    function resetPhoneView() {
-      phoneView = { zoom: 1, x: 0, y: 0 };
-      updatePhoneViewControls();
-      applyPhoneView();
+    function resetImageView() {
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0 };
+      updateImageViewControls();
+      applyImageView();
     }
 
-    function applyPhoneView() {
+    function applyImageView() {
       const image = document.getElementById('mockup-wallpaper-img');
       if (!image) return;
-      image.style.transform = `translate(${phoneView.x}%, ${phoneView.y}%) scale(${phoneView.zoom})`;
+      image.style.transform = `translate(${imageView.x}%, ${imageView.y}%) rotate(${imageView.rotation || 0}deg) scale(${imageView.zoom})`;
     }
 
+    function renderWallpaperPalette(wp) {
+      const container = document.getElementById('modal-palette-container');
+      if (!container) return;
+      const fallback = wp.colors && wp.colors.length ? wp.colors : ['#64748B', '#334155', '#0F172A'];
+      const draw = (colors) => {
+        container.innerHTML = colors.map(c => `<button class="palette-swatch flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-cyan-400 transition-colors text-[10px] font-mono text-slate-300" data-hex="${c}" title="Copy ${c}"><span class="w-3.5 h-3.5 rounded-full" style="background-color:${c}"></span><span>${c}</span></button>`).join('');
+        container.querySelectorAll('.palette-swatch').forEach(sw => { sw.onclick = () => { const hex = sw.getAttribute('data-hex'); copyToClipboard(hex); showToast(`Copied ${hex} to clipboard!`, 'success'); }; });
+      };
+      draw(fallback);
+      const img = new Image(); img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 64;
+          const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(img, 0, 0, 64, 64);
+          const data = ctx.getImageData(0, 0, 64, 64).data; const bins = new Map();
+          for (let i = 0; i < data.length; i += 16) { if (data[i+3] < 180) continue; const rgb = [data[i],data[i+1],data[i+2]].map(v => Math.min(255, Math.round(v/32)*32)); const key = rgb.join(','); bins.set(key, (bins.get(key)||0)+1); }
+          const colors = [...bins.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6).map(([key]) => '#' + key.split(',').map(v=>Number(v).toString(16).padStart(2,'0')).join('').toUpperCase());
+          if (colors.length) draw(colors);
+        } catch (e) { /* Keep stored palette when cross-origin sampling is blocked. */ }
+      };
+      img.onerror = () => draw(fallback); img.src = wp.data_uri;
+    }
     function updateStudioModalFavButton() {
       const btn = document.getElementById('modal-fav-toggle');
       if (!btn || !activeStudioWallpaper) return;
@@ -1737,7 +1753,7 @@
 
       viewport.innerHTML = innerContent;
       applyTuningFilter();
-      if (activeMockupFrame === 'phone') applyPhoneView();
+      applyImageView();
     }
 
     async function executeDirectDownload(wp) {
@@ -1764,7 +1780,7 @@
       }
     }
 
-    function executeCanvasDownload(wp, res, tuning, phoneFraming = { zoom: 1, x: 0, y: 0 }) {
+    function executeCanvasDownload(wp, res, tuning, view = { zoom: 1, x: 0, y: 0, rotation: 0 }) {
       showToast(`Rendering ${res.label}...`, 'info');
 
       const canvas = document.getElementById('export-canvas');
@@ -1789,17 +1805,17 @@
           ctx.drawImage(img, (canvas.width - coverW) / 2 - 90, (canvas.height - coverH) / 2 - 90, coverW + 180, coverH + 180);
           ctx.restore();
           ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
-          const fitRatio = Math.min(hRatio, vRatio) * phoneFraming.zoom;
+          const fitRatio = Math.min(hRatio, vRatio) * view.zoom;
           const fitW = img.width * fitRatio;
           const fitH = img.height * fitRatio;
-          const drawX = (canvas.width - fitW) / 2 + (phoneFraming.x / 100) * canvas.width;
-          const drawY = (canvas.height - fitH) / 2 + (phoneFraming.y / 100) * canvas.height;
-          ctx.drawImage(img, 0, 0, img.width, img.height, drawX, drawY, fitW, fitH);
+          const drawX = (canvas.width - fitW) / 2 + (view.x / 100) * canvas.width;
+          const drawY = (canvas.height - fitH) / 2 + (view.y / 100) * canvas.height;
+          ctx.save(); ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height); ctx.rotate((view.rotation || 0) * Math.PI / 180); ctx.drawImage(img, -fitW/2, -fitH/2, fitW, fitH); ctx.restore();
         } else {
           const ratio = Math.max(hRatio, vRatio);
           const centerShiftX = (canvas.width - img.width * ratio) / 2;
           const centerShiftY = (canvas.height - img.height * ratio) / 2;
-          ctx.drawImage(img, 0, 0, img.width, img.height, centerShiftX, centerShiftY, img.width * ratio, img.height * ratio);
+          const drawW = img.width * ratio * (view.zoom || 1), drawH = img.height * ratio * (view.zoom || 1); ctx.save(); ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height); ctx.rotate((view.rotation || 0) * Math.PI / 180); ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH); ctx.restore();
         }
 
         try {
