@@ -588,7 +588,7 @@
                 <h4 class="text-xs font-black text-cyan-300 uppercase tracking-wider">Image framing & rotation</h4>
                 <p class="text-[10px] text-slate-400 mt-0.5">Adjust zoom, position, and rotation in every preview mode.</p>
               </div>
-              <div class="flex items-center gap-2"><button id="rotate-left-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↶ 90°</button><button id="rotate-right-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↷ 90°</button><button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset</button></div>
+              <div class="flex items-center gap-2"><button id="rotate-left-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↶ 90°</button><button id="rotate-right-90" type="button" class="px-2 py-1 text-[10px] rounded-md border border-slate-700 text-slate-200 hover:border-cyan-400">↷ 90°</button><button id="reset-image-view" type="button" class="text-[11px] text-slate-300 hover:text-white underline whitespace-nowrap">Reset</button><button id="save-wallpaper-layout" type="button" class="hidden px-2.5 py-1 rounded-lg bg-cyan-500 text-black text-[10px] font-black hover:bg-cyan-400">Save shared layout</button></div>
             </div>
             <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
               <label class="flex items-center gap-2 text-slate-200 cursor-pointer select-none">
@@ -1093,7 +1093,7 @@
       try {
         const { data, error } = await supabaseClient
           .from('wallpapers')
-          .select('id,title,description,category,preview_url,full_url,created_at')
+          .select('id,title,description,category,preview_url,full_url,created_at,layout_settings')
           .order('created_at', { ascending: false });
         if (error) throw error;
 
@@ -1110,6 +1110,7 @@
           description: row.description || `${row.title} — ${row.category} wallpaper.`,
           data_uri: row.preview_url,
           full_url: row.full_url,
+          layout_settings: row.layout_settings || {},
           isUserUpload: true,
           dateAdded: new Date(row.created_at).getTime()
         }));
@@ -1153,6 +1154,8 @@
     let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
+    let wallpaperLayoutSettings = {};
+    let isWallpaperLayoutAdmin = false;
 
     let uploadImageData = null;
     let uploadDetectedAspect = '16:9';
@@ -1533,6 +1536,12 @@
 
       closeBtn.onclick = closeStudioModal;
       modal.onclick = (e) => { if (e.target === modal) closeStudioModal(); };
+      const saveLayoutBtn = document.getElementById('save-wallpaper-layout');
+      if (saveLayoutBtn) saveLayoutBtn.onclick = saveSharedWallpaperLayout;
+      supabaseClient.auth.getSession().then(({ data }) => {
+        isWallpaperLayoutAdmin = data?.session?.user?.app_metadata?.role === 'admin';
+        if (saveLayoutBtn) saveLayoutBtn.classList.toggle('hidden', !isWallpaperLayoutAdmin);
+      });
 
       const mockupTabs = document.querySelectorAll('#device-mockup-tabs .mockup-tab');
       mockupTabs.forEach(tab => {
@@ -1656,10 +1665,14 @@
 
       renderWallpaperPalette(wp);
 
-      resetImageView();
-      if (wp.aspect === '9:16') setMockupTab('phone');
-      else if (wp.aspect === '21:9') setMockupTab('ultrawide');
-      else setMockupTab('clean');
+      wallpaperLayoutSettings = (wp.layout_settings && typeof wp.layout_settings === 'object') ? structuredClone(wp.layout_settings) : {};
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+      resetStudioTuning();
+      updateImageViewControls();
+      const savedDefaultFrame = wp.aspect === '9:16' ? 'phone' : (wp.aspect === '21:9' ? 'ultrawide' : 'clean');
+      setMockupTab(savedDefaultFrame);
+      const saveLayoutBtn = document.getElementById('save-wallpaper-layout');
+      if (saveLayoutBtn) saveLayoutBtn.classList.toggle('hidden', !isWallpaperLayoutAdmin);
 
       updateStudioModalFavButton();
 
@@ -1669,7 +1682,28 @@
     }
 
     function setMockupTab(frame) {
+      if (activeStudioWallpaper && activeMockupFrame) {
+        wallpaperLayoutSettings.frames = wallpaperLayoutSettings.frames || {};
+        wallpaperLayoutSettings.frames[activeMockupFrame] = {
+          view: { ...imageView },
+          tuning: { ...currentTuning }
+        };
+      }
       activeMockupFrame = frame;
+      const savedFrame = wallpaperLayoutSettings.frames && wallpaperLayoutSettings.frames[frame];
+      if (savedFrame) {
+        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, ...(savedFrame.view || {}) };
+        currentTuning = { brightness:100, contrast:100, saturation:100, hue:0, blur:0, ...(savedFrame.tuning || {}) };
+      } else {
+        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+        currentTuning = { brightness:100, contrast:100, saturation:100, hue:0, blur:0 };
+      }
+      updateImageViewControls();
+      ['brightness','contrast','saturation','hue','blur'].forEach(prop => {
+        const slider=document.getElementById('slider-'+prop), label=document.getElementById('val-'+prop);
+        if(slider) slider.value=currentTuning[prop];
+        if(label) label.textContent = `${currentTuning[prop]}${prop==='hue'?'°':prop==='blur'?'px':'%'}`;
+      });
       document.querySelectorAll('#device-mockup-tabs .mockup-tab').forEach(t => {
         const isMatch = t.getAttribute('data-frame') === frame;
         t.classList.toggle('bg-cyan-500', isMatch);
@@ -1678,6 +1712,38 @@
         t.classList.toggle('text-slate-400', !isMatch);
       });
       renderMockupViewport();
+    }
+
+    async function saveSharedWallpaperLayout() {
+      if (!activeStudioWallpaper || !isWallpaperLayoutAdmin) {
+        showToast('Only an authenticated administrator can save shared layouts.', 'error');
+        return;
+      }
+      wallpaperLayoutSettings.frames = wallpaperLayoutSettings.frames || {};
+      wallpaperLayoutSettings.frames[activeMockupFrame] = {
+        view: { ...imageView },
+        tuning: { ...currentTuning }
+      };
+      const button = document.getElementById('save-wallpaper-layout');
+      if (button) { button.disabled = true; button.textContent = 'Saving…'; }
+      try {
+        const { data, error } = await supabaseClient
+          .from('wallpapers')
+          .update({ layout_settings: wallpaperLayoutSettings })
+          .eq('id', Number(activeStudioWallpaper.id))
+          .select('id,layout_settings')
+          .single();
+        if (error) throw error;
+        activeStudioWallpaper.layout_settings = data.layout_settings || wallpaperLayoutSettings;
+        const index = WALLPAPERS.findIndex(w => String(w.id) === String(activeStudioWallpaper.id));
+        if (index >= 0) WALLPAPERS[index].layout_settings = activeStudioWallpaper.layout_settings;
+        showToast('Shared layout saved. All visitors will see this correction.', 'success');
+      } catch (error) {
+        console.error('Shared layout save failed:', error);
+        showToast('Could not save shared layout. Check admin login and Supabase permissions.', 'error');
+      } finally {
+        if (button) { button.disabled = false; button.textContent = 'Save shared layout'; }
+      }
     }
 
     function updateImageViewControls() {
