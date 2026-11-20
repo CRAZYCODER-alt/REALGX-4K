@@ -1725,7 +1725,9 @@
         image.naturalWidth, image.naturalHeight, rect.width, rect.height,
         imageView.autoRotate === true && activeMockupFrame !== 'clean'
       );
-      const rotated = autoRotation !== 0;
+      // Manual rotation is an absolute override, not an extra angle stacked on auto-rotation.
+      const effectiveRotation = Number(imageView.rotation || 0) !== 0 ? Number(imageView.rotation) : autoRotation;
+      const rotated = Math.abs(effectiveRotation % 180) === 90;
       image.style.position = 'absolute';
       image.style.left = '50%';
       image.style.top = '50%';
@@ -1741,7 +1743,6 @@
       image.style.cursor = 'grab';
       image.style.touchAction = 'none';
       image.style.userSelect = 'none';
-      const effectiveRotation = Number(imageView.rotation || 0) !== 0 ? Number(imageView.rotation) : autoRotation;
       image.style.transform = `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0) rotate(${effectiveRotation}deg) scale(${imageView.zoom || 1})`;
     }
 
@@ -1912,7 +1913,9 @@
 
         // Match source orientation to the selected export orientation when Auto fit & rotate is enabled.
         const autoRotation = getAutoFitRotation(img.width, img.height, canvas.width, canvas.height, view.autoRotate === true);
-        const rotated = autoRotation !== 0;
+        // Keep preview and exported orientation identical; manual rotation replaces auto-rotation.
+        const effectiveRotation = Number(view.rotation || 0) !== 0 ? Number(view.rotation) : autoRotation;
+        const rotated = Math.abs(effectiveRotation % 180) === 90;
         const effectiveW = rotated ? img.height : img.width;
         const effectiveH = rotated ? img.width : img.height;
         const fitRatio = view.autoFitRotate === false
@@ -1922,7 +1925,6 @@
         const drawH = img.height * fitRatio * (view.zoom || 1);
         ctx.save();
         ctx.translate(canvas.width / 2 + ((view.x || 0) / 100) * canvas.width, canvas.height / 2 + ((view.y || 0) / 100) * canvas.height);
-        const effectiveRotation = Number(view.rotation || 0) !== 0 ? Number(view.rotation) : autoRotation;
         ctx.rotate((effectiveRotation * Math.PI) / 180);
         ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
         ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
