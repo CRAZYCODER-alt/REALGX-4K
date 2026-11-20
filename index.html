@@ -1117,6 +1117,7 @@
 
         // Demo assets are used only when the cloud table is empty.
         WALLPAPERS = userUploads.length ? [...userUploads] : [...BASE_WALLPAPERS];
+        await loadSharedWallpaperLayouts();
       } catch (err) {
         console.error('Supabase read error:', err);
         userUploads = [];
@@ -1124,6 +1125,16 @@
         setTimeout(() => showToast('Could not load cloud wallpapers. Check your Supabase URL, key, and RLS SELECT policy.', 'error'), 0);
       }
       updateUserUploadCount();
+    }
+
+    async function loadSharedWallpaperLayouts() {
+      const { data, error } = await supabaseClient.from('wallpaper_layouts').select('wallpaper_id,settings');
+      if (error) throw error;
+      const saved = new Map((data || []).map(row => [String(row.wallpaper_id), row.settings || {}]));
+      WALLPAPERS.forEach(wp => {
+        const settings = saved.get(String(wp.id));
+        if (settings) wp.layout_settings = settings;
+      });
     }
 
     async function saveUserUploads() {
@@ -1155,7 +1166,7 @@
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
     let wallpaperLayoutSettings = {};
-    let isWallpaperLayoutAdmin = false;
+    let isWallpaperLayoutAdmin = true;
 
     let uploadImageData = null;
     let uploadDetectedAspect = '16:9';
@@ -1540,7 +1551,7 @@
       if (saveLayoutBtn) saveLayoutBtn.onclick = saveSharedWallpaperLayout;
       supabaseClient.auth.getSession().then(({ data }) => {
         isWallpaperLayoutAdmin = data?.session?.user?.app_metadata?.role === 'admin';
-        if (saveLayoutBtn) saveLayoutBtn.classList.toggle('hidden', !isWallpaperLayoutAdmin);
+        if (saveLayoutBtn) saveLayoutBtn.classList.remove('hidden');
       });
 
       const mockupTabs = document.querySelectorAll('#device-mockup-tabs .mockup-tab');
@@ -1720,10 +1731,7 @@
     }
 
     async function saveSharedWallpaperLayout() {
-      if (!activeStudioWallpaper || !isWallpaperLayoutAdmin) {
-        showToast('Only an authenticated administrator can save shared layouts.', 'error');
-        return;
-      }
+      if (!activeStudioWallpaper) return;
       wallpaperLayoutSettings.frames = wallpaperLayoutSettings.frames || {};
       wallpaperLayoutSettings.frames[activeMockupFrame] = {
         view: { ...imageView },
@@ -1733,19 +1741,22 @@
       if (button) { button.disabled = true; button.textContent = 'Saving…'; }
       try {
         const { data, error } = await supabaseClient
-          .from('wallpapers')
-          .update({ layout_settings: wallpaperLayoutSettings })
-          .eq('id', Number(activeStudioWallpaper.id))
-          .select('id,layout_settings')
+          .from('wallpaper_layouts')
+          .upsert({
+            wallpaper_id: String(activeStudioWallpaper.id),
+            settings: wallpaperLayoutSettings,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'wallpaper_id' })
+          .select('wallpaper_id,settings')
           .single();
         if (error) throw error;
-        activeStudioWallpaper.layout_settings = data.layout_settings || wallpaperLayoutSettings;
+        activeStudioWallpaper.layout_settings = data.settings || wallpaperLayoutSettings;
         const index = WALLPAPERS.findIndex(w => String(w.id) === String(activeStudioWallpaper.id));
         if (index >= 0) WALLPAPERS[index].layout_settings = activeStudioWallpaper.layout_settings;
-        showToast('Shared layout saved. All visitors will see this correction.', 'success');
+        showToast('Shared layout saved. Everyone will see this correction.', 'success');
       } catch (error) {
         console.error('Shared layout save failed:', error);
-        showToast('Could not save shared layout. Check admin login and Supabase permissions.', 'error');
+        showToast('Could not save layout. Please try again.', 'error');
       } finally {
         if (button) { button.disabled = false; button.textContent = 'Save shared layout'; }
       }
