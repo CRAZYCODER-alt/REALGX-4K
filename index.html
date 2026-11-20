@@ -1057,7 +1057,7 @@
       try {
         const { data, error } = await supabaseClient
           .from('wallpapers')
-          .select('id,title,category,preview_url,full_url,created_at')
+          .select('id,title,description,category,preview_url,full_url,created_at')
           .order('created_at', { ascending: false });
         if (error) throw error;
 
@@ -1071,7 +1071,7 @@
           tags: [row.category, '4K', 'Wallpaper'],
           colors: ['#00f0ff', '#ff007f', '#a855f7'],
           downloads: '0',
-          description: `${row.title} — ${row.category} wallpaper.`,
+          description: row.description || `${row.title} — ${row.category} wallpaper.`,
           data_uri: row.preview_url,
           full_url: row.full_url,
           isUserUpload: true,
