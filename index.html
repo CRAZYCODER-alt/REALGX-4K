@@ -1715,8 +1715,9 @@
         innerContent = `
           <div class="w-full max-w-xl flex flex-col items-center">
             <div class="monitor-frame w-full aspect-[16/9] bg-slate-950 rounded-t-xl p-2 sm:p-2.5 border-4 border-slate-800 relative overflow-hidden flex items-center justify-center">
-              <img id="mockup-wallpaper-img" src="${uri}" alt="Gaming PC Monitor" class="w-full h-full object-cover rounded transition-all duration-100">
-              <div class="absolute bottom-1 right-2 text-[9px] font-mono text-cyan-400 bg-black/60 px-1.5 rounded">165Hz HDR</div>
+              <img src="${uri}" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover scale-110 blur-xl brightness-50">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="Gaming PC Monitor" class="relative z-10 w-full h-full object-contain rounded transition-all duration-100">
+              <div class="absolute bottom-1 right-2 z-20 text-[9px] font-mono text-cyan-400 bg-black/60 px-1.5 rounded">165Hz HDR</div>
             </div>
             <div class="w-16 sm:w-20 h-3 sm:h-4 bg-slate-800 border-x border-slate-700"></div>
             <div class="w-28 sm:w-36 h-2 sm:h-2.5 bg-slate-700 rounded-b-lg shadow-lg"></div>
@@ -1742,8 +1743,9 @@
         innerContent = `
           <div class="w-full max-w-2xl flex flex-col items-center">
             <div class="monitor-frame w-full aspect-[21/9] bg-slate-950 rounded-t-xl p-1.5 sm:p-2 border-4 border-slate-800 relative overflow-hidden flex items-center justify-center">
-              <img id="mockup-wallpaper-img" src="${uri}" alt="21:9 Ultrawide Curved" class="w-full h-full object-cover rounded transition-all duration-100">
-              <div class="absolute bottom-1 left-2 text-[8px] font-mono text-pink-400 bg-black/70 px-1 rounded">21:9 Cinema UltraWide</div>
+              <img src="${uri}" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover scale-110 blur-xl brightness-50">
+              <img id="mockup-wallpaper-img" src="${uri}" alt="21:9 Ultrawide Curved" class="relative z-10 w-full h-full object-contain rounded transition-all duration-100">
+              <div class="absolute bottom-1 left-2 z-20 text-[8px] font-mono text-pink-400 bg-black/70 px-1 rounded">21:9 Cinema UltraWide</div>
             </div>
             <div class="w-14 sm:w-16 h-2.5 sm:h-3 bg-slate-800"></div>
             <div class="w-36 sm:w-44 h-2 bg-slate-700 rounded-b shadow-lg"></div>
@@ -1795,22 +1797,28 @@
 
         const hRatio = canvas.width / img.width;
         const vRatio = canvas.height / img.height;
-        const portrait = res.h > res.w;
         const coverRatio = Math.max(hRatio, vRatio);
-        const coverW = img.width * coverRatio, coverH = img.height * coverRatio;
-        if (portrait) {
-          ctx.save(); ctx.filter = 'blur(42px) brightness(0.55)';
-          ctx.drawImage(img, (canvas.width-coverW)/2-90, (canvas.height-coverH)/2-90, coverW+180, coverH+180);
-          ctx.restore();
-        }
+        const coverW = img.width * coverRatio;
+        const coverH = img.height * coverRatio;
+
+        // Soft background fills any empty space without cropping the original wallpaper.
         ctx.save();
-        ctx.translate(canvas.width/2 + (view.x/100)*canvas.width, canvas.height/2 + (view.y/100)*canvas.height);
-        ctx.rotate((view.rotation || 0) * Math.PI / 180);
-        const baseRatio = portrait ? Math.min(hRatio, vRatio) : coverRatio;
-        const scale = baseRatio * (view.zoom || 1);
-        const drawW = img.width * scale, drawH = img.height * scale;
+        ctx.filter = 'blur(48px) brightness(0.48)';
+        ctx.drawImage(img, (canvas.width - coverW) / 2 - 100, (canvas.height - coverH) / 2 - 100, coverW + 200, coverH + 200);
+        ctx.restore();
+
+        // Foreground always uses CONTAIN, so portrait wallpapers remain fully visible on PC.
+        const fitRatio = Math.min(hRatio, vRatio);
+        const drawW = img.width * fitRatio * (view.zoom || 1);
+        const drawH = img.height * fitRatio * (view.zoom || 1);
+        ctx.save();
+        ctx.translate(
+          canvas.width / 2 + ((view.x || 0) / 100) * canvas.width,
+          canvas.height / 2 + ((view.y || 0) / 100) * canvas.height
+        );
+        ctx.rotate(((view.rotation || 0) * Math.PI) / 180);
         ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
-        ctx.drawImage(img, -drawW/2, -drawH/2, drawW, drawH);
+        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
         ctx.restore();
 
         try {
