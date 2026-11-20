@@ -1702,7 +1702,7 @@
       const autoFitToggle = document.getElementById('image-auto-fit-rotate');
       if (autoFitToggle) autoFitToggle.checked = true;
       const autoRotateToggle = document.getElementById('image-auto-rotate');
-      if (autoRotateToggle) autoRotateToggle.checked = false;
+      if (autoRotateToggle) autoRotateToggle.checked = true;
       updateImageViewControls();
       applyImageView();
     }
@@ -1717,6 +1717,19 @@
       if (!image || !image.parentElement) return;
       const stage = image.parentElement;
       const rect = stage.getBoundingClientRect();
+      if (activeMockupFrame === 'clean') {
+        image.style.position = 'relative';
+        image.style.left = 'auto';
+        image.style.top = 'auto';
+        image.style.width = 'auto';
+        image.style.height = 'auto';
+        image.style.maxWidth = '100%';
+        image.style.maxHeight = '100%';
+        image.style.objectFit = 'contain';
+        image.style.transform = 'none';
+        image.style.cursor = 'default';
+        return;
+      }
       if (!rect.width || !rect.height || !image.naturalWidth || !image.naturalHeight) {
         image.onload = () => applyImageView();
         return;
@@ -1809,8 +1822,8 @@
 
       if (activeMockupFrame === 'clean') {
         innerContent = `
-          <div class="relative max-h-full max-w-full rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950 flex items-center justify-center">
-            <img id="mockup-wallpaper-img" src="${uri}" alt="Wallpaper Studio" class="max-h-[260px] sm:max-h-[380px] w-auto object-contain transition-all duration-100">
+          <div class="relative w-full h-full max-h-full max-w-full rounded-xl overflow-hidden shadow-2xl border border-slate-700 bg-slate-950 flex items-center justify-center">
+            <img id="mockup-wallpaper-img" src="${uri}" alt="Wallpaper Studio" class="block max-h-full max-w-full w-auto h-auto object-contain transition-all duration-100">
           </div>
         `;
       } else if (activeMockupFrame === 'monitor') {
@@ -1827,7 +1840,7 @@
         `;
       } else if (activeMockupFrame === 'phone') {
         innerContent = `
-          <div class="phone-frame w-44 sm:w-56 aspect-[9/18] bg-black rounded-[32px] sm:rounded-[36px] p-2 sm:p-2.5 border-4 border-slate-800 relative overflow-hidden flex flex-col items-center shadow-2xl">
+          <div class="phone-frame h-full max-h-full w-auto max-w-full aspect-[9/18] bg-black rounded-[32px] sm:rounded-[36px] p-2 sm:p-2.5 border-4 border-slate-800 relative overflow-hidden flex flex-col items-center shadow-2xl">
             <div class="w-14 sm:w-16 h-3.5 sm:h-4 bg-black rounded-full absolute top-3.5 sm:top-4 z-20 flex items-center justify-center border border-slate-900">
               <div class="w-2 h-2 rounded-full bg-slate-900 ml-auto mr-2"></div>
             </div>
