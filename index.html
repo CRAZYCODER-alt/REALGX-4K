@@ -1666,6 +1666,7 @@
       renderWallpaperPalette(wp);
 
       wallpaperLayoutSettings = (wp.layout_settings && typeof wp.layout_settings === 'object') ? structuredClone(wp.layout_settings) : {};
+      activeMockupFrame = null;
       imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
       resetStudioTuning();
       updateImageViewControls();
@@ -1699,6 +1700,10 @@
         currentTuning = { brightness:100, contrast:100, saturation:100, hue:0, blur:0 };
       }
       updateImageViewControls();
+      const fitToggle = document.getElementById('image-auto-fit-rotate');
+      const rotateToggle = document.getElementById('image-auto-rotate');
+      if (fitToggle) fitToggle.checked = imageView.autoFitRotate !== false;
+      if (rotateToggle) rotateToggle.checked = imageView.autoRotate === true;
       ['brightness','contrast','saturation','hue','blur'].forEach(prop => {
         const slider=document.getElementById('slider-'+prop), label=document.getElementById('val-'+prop);
         if(slider) slider.value=currentTuning[prop];
