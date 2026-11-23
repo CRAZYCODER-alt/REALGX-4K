@@ -1840,47 +1840,133 @@
       const image = document.getElementById('mockup-wallpaper-img');
       if (!image || !image.parentElement) return;
       const stage = image.parentElement;
-      const rect = stage.getBoundingClientRect();
+      const parent = stage.parentElement;
+      const cropRatios = {
+        '16:9': 16 / 9, '9:16': 9 / 16, '1:1': 1,
+        '4:5': 4 / 5, '3:2': 3 / 2, '2:3': 2 / 3, '21:9': 21 / 9
+      };
+      const cropRatio = cropRatios[imageView.cropAspect];
+      const isCleanCrop = activeMockupFrame === 'clean' && !!cropRatio;
+
+      // The clean preview normally uses the image's natural proportions. In crop
+      // mode, give it a real crop-sized stage so the selected ratio is visible.
       if (activeMockupFrame === 'clean') {
-        image.style.position = 'relative';
-        image.style.left = 'auto';
-        image.style.top = 'auto';
-        image.style.width = 'auto';
-        image.style.height = 'auto';
-        image.style.maxWidth = '100%';
-        image.style.maxHeight = '100%';
-        image.style.objectFit = 'contain';
-        image.style.transform = 'none';
-        image.style.cursor = 'default';
-        return;
+        if (isCleanCrop && parent) {
+          const bounds = parent.getBoundingClientRect();
+          if (!bounds.width || !bounds.height) {
+            requestAnimationFrame(() => applyImageView());
+            return;
+          }
+          const width = Math.min(bounds.width, bounds.height * cropRatio);
+          const height = width / cropRatio;
+          stage.style.width = width + 'px';
+          stage.style.height = height + 'px';
+          stage.style.maxWidth = '100%';
+          stage.style.maxHeight = '100%';
+          stage.style.aspectRatio = cropRatio;
+          stage.style.flex = 'none';
+          stage.style.position = 'relative';
+          stage.style.overflow = 'hidden';
+        } else if (!cropRatio) {
+          stage.style.width = '100%';
+          stage.style.height = '100%';
+          stage.style.maxWidth = '100%';
+          stage.style.maxHeight = '100%';
+          stage.style.aspectRatio = '';
+          stage.style.flex = '';
+          stage.style.position = 'relative';
+          stage.style.overflow = 'hidden';
+          image.style.position = 'relative';
+          image.style.left = 'auto';
+          image.style.top = 'auto';
+          image.style.width = 'auto';
+          image.style.height = 'auto';
+          image.style.maxWidth = '100%';
+          image.style.maxHeight = '100%';
+          image.style.objectFit = 'contain';
+          image.style.transform = 'none';
+          image.style.cursor = 'default';
+          const oldGuide = stage.querySelector('.crop-preview-guide');
+          if (oldGuide) oldGuide.remove();
+          return;
+        }
       }
+
+      const rect = stage.getBoundingClientRect();
       if (!rect.width || !rect.height || !image.naturalWidth || !image.naturalHeight) {
         image.onload = () => applyImageView();
         return;
       }
+
+      // Crop frame is centered inside the device screen. The image is sized to
+      // that frame (not the whole device), so preview and exported crop use the
+      // same aspect ratio and subject framing.
+      let frameW = rect.width;
+      let frameH = rect.height;
+      if (cropRatio) {
+        if (rect.width / rect.height > cropRatio) {
+          frameH = rect.height;
+          frameW = frameH * cropRatio;
+        } else {
+          frameW = rect.width;
+          frameH = frameW / cropRatio;
+        }
+      }
+
       const autoRotation = getAutoFitRotation(
-        image.naturalWidth, image.naturalHeight, rect.width, rect.height,
+        image.naturalWidth, image.naturalHeight, frameW, frameH,
         imageView.autoRotate === true && activeMockupFrame !== 'clean'
       );
-      // Manual rotation is an absolute override, not an extra angle stacked on auto-rotation.
       const effectiveRotation = Number(imageView.rotation || 0) !== 0 ? Number(imageView.rotation) : autoRotation;
       const rotated = Math.abs(effectiveRotation % 180) === 90;
+      const imageBoxW = rotated ? frameH : frameW;
+      const imageBoxH = rotated ? frameW : frameH;
+
       image.style.position = 'absolute';
       image.style.left = '50%';
       image.style.top = '50%';
-      image.style.width = `${rotated ? rect.height : rect.width}px`;
-      image.style.height = `${rotated ? rect.width : rect.height}px`;
+      image.style.width = imageBoxW + 'px';
+      image.style.height = imageBoxH + 'px';
       image.style.maxWidth = 'none';
       image.style.maxHeight = 'none';
-      image.style.objectFit = imageView.autoFitRotate !== false ? 'contain' : 'cover';
+      image.style.objectFit = cropRatio || imageView.autoFitRotate === false ? 'cover' : 'contain';
+      image.style.objectPosition = 'center';
       image.style.transformOrigin = 'center center';
-      const offsetX = (Number(imageView.x) / 100) * rect.width;
-      const offsetY = (Number(imageView.y) / 100) * rect.height;
+      const offsetX = (Number(imageView.x) / 100) * frameW;
+      const offsetY = (Number(imageView.y) / 100) * frameH;
       image.style.willChange = 'transform';
       image.style.cursor = 'grab';
       image.style.touchAction = 'none';
       image.style.userSelect = 'none';
       image.style.transform = `translate3d(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px), 0) rotate(${effectiveRotation}deg) scale(${imageView.zoom || 1})`;
+
+      let guide = stage.querySelector('.crop-preview-guide');
+      if (cropRatio) {
+        if (!guide) {
+          guide = document.createElement('div');
+          guide.className = 'crop-preview-guide';
+          guide.setAttribute('aria-hidden', 'true');
+          stage.appendChild(guide);
+        }
+        Object.assign(guide.style, {
+          position: 'absolute',
+          zIndex: '25',
+          left: '50%',
+          top: '50%',
+          width: frameW + 'px',
+          height: frameH + 'px',
+          transform: 'translate(-50%, -50%)',
+          boxSizing: 'border-box',
+          border: '2px solid #22d3ee',
+          outline: '1px dashed rgba(255,255,255,.85)',
+          boxShadow: '0 0 0 9999px rgba(2,6,23,.58)',
+          pointerEvents: 'none'
+        });
+        const help = document.getElementById('image-crop-help');
+        if (help) help.textContent = 'Crop preview active: the bright outlined area is what will be exported. Drag the image or use Zoom / Horizontal / Vertical to reposition it.';
+      } else if (guide) {
+        guide.remove();
+      }
     }
 
     function renderWallpaperPalette(wp) {
