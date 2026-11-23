@@ -100,6 +100,11 @@
     .phone-frame {
       box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.95), 0 0 30px rgba(255, 0, 127, 0.2);
     }
+    .library-panel { animation: library-slide-in .28s cubic-bezier(.2,.8,.2,1); }
+    @keyframes library-slide-in { from { transform: translateX(28px); opacity: .75; } to { transform: translateX(0); opacity: 1; } }
+    .library-tab.active { color: #fff; background: linear-gradient(100deg, rgba(6,182,212,.28), rgba(99,102,241,.22)); box-shadow: inset 0 0 0 1px rgba(103,232,249,.22); }
+    .library-item { animation: library-card-in .24s ease both; }
+    @keyframes library-card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-cyan-500 selection:text-black">
@@ -741,32 +746,19 @@
     </div>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- MODAL 2: SAVED FAVORITES DRAWER -->
-  <!-- ========================================================================= -->
-  <div id="favorites-drawer" class="fixed inset-0 z-50 hidden flex justify-end bg-black/70 backdrop-blur-sm">
-    <div class="w-full max-w-md h-full bg-[#0d1224] border-l border-slate-800 flex flex-col shadow-2xl p-4 sm:p-6 overflow-hidden">
-      <div class="flex items-center justify-between pb-4 border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-pink-500 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          <h3 class="font-bold text-white text-base">Your Saved Favorites</h3>
-        </div>
-        <button id="close-favorites-btn" class="p-1 text-slate-400 hover:text-white">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
+  <!-- REALGX PERSONAL LIBRARY -->
+  <div id="favorites-drawer" class="fixed inset-0 z-50 hidden flex justify-end bg-slate-950/75 backdrop-blur-md">
+    <div class="library-panel w-full max-w-2xl h-full bg-[#090e1d] border-l border-cyan-400/20 flex flex-col shadow-2xl overflow-hidden">
+      <div class="relative p-5 sm:p-7 border-b border-white/10 bg-gradient-to-br from-cyan-950/60 via-[#10162a] to-fuchsia-950/40">
+        <div class="flex items-start justify-between gap-4"><div><div class="flex items-center gap-2 text-[10px] uppercase tracking-[.25em] font-black text-cyan-300"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Your personal space</div><h3 class="mt-2 text-2xl sm:text-3xl font-black text-white">My <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-fuchsia-400">Library</span></h3><p class="mt-1 text-xs text-slate-400">Your wallpapers, saved for whenever you need them.</p></div>
+          <button id="close-favorites-btn" class="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10" aria-label="Close library"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <div class="grid grid-cols-2 gap-3 mt-5"><div class="rounded-2xl border border-pink-400/20 bg-pink-400/10 p-3"><div class="text-[10px] uppercase tracking-wider text-pink-200/70">Favorites</div><div class="flex items-end justify-between"><strong id="library-fav-count" class="text-2xl text-white">0</strong><span class="text-pink-300">♥</span></div></div><div class="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-3"><div class="text-[10px] uppercase tracking-wider text-cyan-100/70">Download later</div><div class="flex items-end justify-between"><strong id="library-later-count" class="text-2xl text-white">0</strong><span class="text-cyan-300">↓</span></div></div></div>
       </div>
-
-      <div id="favorites-list-container" class="flex-1 overflow-y-auto py-4 space-y-3">
-        <!-- Rendered by JS -->
-      </div>
-
-      <div class="pt-4 border-t border-slate-800 flex items-center justify-between">
-        <button id="clear-all-favs-btn" class="text-xs text-red-400 hover:text-red-300 font-medium">Clear All</button>
-        <button id="close-drawer-done-btn" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-colors">Done</button>
-      </div>
+      <div class="px-5 sm:px-7 pt-4"><div class="grid grid-cols-2 rounded-xl bg-slate-900/80 border border-white/10 p-1 gap-1"><button id="library-tab-favorites" class="library-tab active rounded-lg px-3 py-2.5 text-xs font-bold">♥ Favorites</button><button id="library-tab-later" class="library-tab rounded-lg px-3 py-2.5 text-xs font-bold">↓ Download Later</button></div></div>
+      <div id="favorites-list-container" class="flex-1 overflow-y-auto p-5 sm:p-7 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start"></div>
+      <div class="px-5 sm:px-7 py-4 border-t border-white/10 flex items-center justify-between bg-slate-950/60"><button id="clear-all-favs-btn" class="text-xs text-slate-500 hover:text-red-300 font-semibold">Clear this collection</button><button id="close-drawer-done-btn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 text-xs font-black">Done</button></div>
     </div>
   </div>
-
   <div id="toast-container" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col items-end gap-2 pointer-events-none"></div>
 
   <canvas id="export-canvas" class="hidden"></canvas>
