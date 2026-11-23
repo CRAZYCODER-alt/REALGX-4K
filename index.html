@@ -556,6 +556,7 @@
           <button id="modal-fav-toggle" class="p-2 text-slate-400 hover:text-pink-500 rounded-lg hover:bg-slate-800 transition-colors" title="Toggle Favorite">
             <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
           </button>
+          <button id="modal-later-toggle" class="p-2 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-slate-800 transition-colors" title="Save for download later"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4.75A1.75 1.75 0 017.75 3h8.5A1.75 1.75 0 0118 4.75V21l-6-3.5L6 21V4.75z"/></svg></button>
           <button id="close-modal-btn" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
           </button>
@@ -1711,6 +1712,7 @@
       document.getElementById('modal-fav-toggle').onclick = () => {
         if (activeStudioWallpaper) toggleFavorite(activeStudioWallpaper.id);
       };
+      document.getElementById('modal-later-toggle').onclick = () => { if (activeStudioWallpaper) toggleDownloadLater(activeStudioWallpaper.id); };
     }
 
     function openStudioModal(wp) {
@@ -1726,6 +1728,8 @@
       tagsContainer.innerHTML = wp.tags.map(t => `<span class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] text-cyan-300 font-mono">#${t}</span>`).join('');
 
       renderWallpaperPalette(wp);
+      updateStudioModalFavButton();
+      updateStudioModalLaterButton();
 
       wallpaperLayoutSettings = (wp.layout_settings && typeof wp.layout_settings === 'object') ? structuredClone(wp.layout_settings) : {};
       activeMockupFrame = null;
@@ -2008,6 +2012,14 @@
       const isFav = favorites.includes(activeStudioWallpaper.id);
       btn.classList.toggle('text-pink-500', isFav);
       btn.classList.toggle('text-slate-400', !isFav);
+    }
+    function updateStudioModalLaterButton() {
+      const btn = document.getElementById('modal-later-toggle');
+      if (!btn || !activeStudioWallpaper) return;
+      const saved = downloadLater.includes(activeStudioWallpaper.id);
+      btn.classList.toggle('text-cyan-300', saved);
+      btn.classList.toggle('text-slate-400', !saved);
+      btn.title = saved ? 'Remove from Download Later' : 'Save for download later';
     }
 
     function closeStudioModal() {
