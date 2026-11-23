@@ -602,6 +602,23 @@
               </label>
               <span class="text-[10px] text-slate-400">Drag the image to reposition it, or use the sliders below.</span>
             </div>
+            <div class="rounded-lg border border-purple-500/25 bg-purple-950/20 p-2.5 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <label for="image-crop-ratio" class="text-[11px] font-bold uppercase tracking-wider text-purple-300">Crop image to</label>
+                <span class="text-[10px] text-slate-400">Choose a shape, then zoom or drag to frame your subject.</span>
+              </div>
+              <select id="image-crop-ratio" class="w-full sm:w-auto min-w-[190px] rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white">
+                <option value="free">Original / no crop</option>
+                <option value="16:9">Landscape · 16:9</option>
+                <option value="9:16">Portrait · 9:16</option>
+                <option value="1:1">Square · 1:1</option>
+                <option value="4:5">Portrait post · 4:5</option>
+                <option value="3:2">Photo · 3:2</option>
+                <option value="2:3">Portrait photo · 2:3</option>
+                <option value="21:9">Ultrawide · 21:9</option>
+              </select>
+              <p id="image-crop-help" class="text-[10px] text-slate-400">Original proportions are preserved. Select a crop ratio to fill the output frame; anything outside the frame will be trimmed.</p>
+            </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <label class="block text-slate-300">Zoom <span id="image-zoom-value" class="text-cyan-300 font-mono">100%</span>
                 <input id="image-zoom" type="range" min="50" max="250" step="1" value="100" class="w-full mt-1 accent-cyan-400">
@@ -1162,7 +1179,7 @@
 
     let activeStudioWallpaper = null;
     let activeMockupFrame = 'clean';
-    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+    let imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, cropAspect: 'free' };
     let currentTuning = { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
     let currentExportResolution = { w: 3840, h: 2160, label: '4K Ultra HD' };
     let wallpaperLayoutSettings = {};
@@ -1622,6 +1639,29 @@
       };
       document.getElementById('reset-image-view').onclick = resetImageView;
 
+      const cropRatioSelect = document.getElementById('image-crop-ratio');
+      const cropOutputSizes = {
+        '16:9': { w: 3840, h: 2160, label: '4K Landscape Crop' },
+        '9:16': { w: 2160, h: 3840, label: '4K Portrait Crop' },
+        '1:1': { w: 3000, h: 3000, label: 'Square Crop' },
+        '4:5': { w: 2160, h: 2700, label: 'Portrait 4:5 Crop' },
+        '3:2': { w: 3840, h: 2560, label: 'Photo 3:2 Crop' },
+        '2:3': { w: 2560, h: 3840, label: 'Portrait 2:3 Crop' },
+        '21:9': { w: 5040, h: 2160, label: 'Ultrawide Crop' }
+      };
+      cropRatioSelect.onchange = () => {
+        imageView.cropAspect = cropRatioSelect.value;
+        imageView.autoFitRotate = cropRatioSelect.value === 'free';
+        const fitToggle = document.getElementById('image-auto-fit-rotate');
+        if (fitToggle) fitToggle.checked = imageView.autoFitRotate;
+        const help = document.getElementById('image-crop-help');
+        if (help) help.textContent = cropRatioSelect.value === 'free'
+          ? 'Original proportions are preserved. No crop will be applied.'
+          : 'Crop ratio selected. Zoom in/out and drag the image to choose exactly which area stays in the exported wallpaper.';
+        updateImageViewControls();
+        applyImageView();
+      };
+
       ['brightness', 'contrast', 'saturation', 'hue', 'blur'].forEach(prop => {
         const slider = document.getElementById(`slider-${prop}`);
         const valLabel = document.getElementById(`val-${prop}`);
@@ -1678,7 +1718,7 @@
 
       wallpaperLayoutSettings = (wp.layout_settings && typeof wp.layout_settings === 'object') ? structuredClone(wp.layout_settings) : {};
       activeMockupFrame = null;
-      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, cropAspect: 'free' };
       resetStudioTuning();
       updateImageViewControls();
       const savedDefaultFrame = wp.aspect === '9:16' ? 'phone' : (wp.aspect === '21:9' ? 'ultrawide' : 'clean');
@@ -1704,10 +1744,10 @@
       activeMockupFrame = frame;
       const savedFrame = wallpaperLayoutSettings.frames && wallpaperLayoutSettings.frames[frame];
       if (savedFrame) {
-        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, ...(savedFrame.view || {}) };
+        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, cropAspect: 'free', ...(savedFrame.view || {}) };
         currentTuning = { brightness:100, contrast:100, saturation:100, hue:0, blur:0, ...(savedFrame.tuning || {}) };
       } else {
-        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+        imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, cropAspect: 'free' };
         currentTuning = { brightness:100, contrast:100, saturation:100, hue:0, blur:0 };
       }
       updateImageViewControls();
@@ -1777,10 +1817,12 @@
       if (rotation) rotation.value = imageView.rotation || 0;
       const rotationLabel = document.getElementById('image-rotation-value');
       if (rotationLabel) rotationLabel.textContent = `${imageView.rotation || 0}°`;
+      const cropSelect = document.getElementById('image-crop-ratio');
+      if (cropSelect) cropSelect.value = imageView.cropAspect || 'free';
     }
 
     function resetImageView() {
-      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true };
+      imageView = { zoom: 1, x: 0, y: 0, rotation: 0, autoFitRotate: true, autoRotate: true, cropAspect: 'free' };
       const autoFitToggle = document.getElementById('image-auto-fit-rotate');
       if (autoFitToggle) autoFitToggle.checked = true;
       const autoRotateToggle = document.getElementById('image-auto-rotate');
@@ -1990,6 +2032,14 @@
       img.crossOrigin = 'anonymous';
 
       img.onload = () => {
+        const cropSizes = {
+          '16:9': { w: 3840, h: 2160 }, '9:16': { w: 2160, h: 3840 },
+          '1:1': { w: 3000, h: 3000 }, '4:5': { w: 2160, h: 2700 },
+          '3:2': { w: 3840, h: 2560 }, '2:3': { w: 2560, h: 3840 },
+          '21:9': { w: 5040, h: 2160 }
+        };
+        const cropSize = cropSizes[view.cropAspect];
+        if (cropSize) { res = { ...res, ...cropSize, label: 'Custom ' + view.cropAspect + ' crop' }; }
         canvas.width = res.w;
         canvas.height = res.h;
         ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
