@@ -2085,115 +2085,112 @@
       applyImageView();
     }
 
+    function getRealgxImageProxyUrl(sourceUrl) {
+      if (!sourceUrl) throw new Error('No image URL is available.');
+      const parsed = new URL(sourceUrl, window.location.origin);
+      if (parsed.origin === window.location.origin) return parsed.href;
+      return `/api/image-proxy?url=${encodeURIComponent(parsed.href)}`;
+    }
+
     async function executeDirectDownload(wp) {
       const url = wp.full_url || wp.data_uri;
       if (!url) { showToast('No download URL is available for this wallpaper.', 'error'); return; }
       showToast(`Preparing ${wp.title}...`, 'info');
       try {
-        const response = await fetch(url, { mode: 'cors' });
-        if (!response.ok) throw new Error(`Download request failed (${response.status})`);
+        const response = await fetch(getRealgxImageProxyUrl(url));
+        if (!response.ok) throw new Error(`Image proxy returned ${response.status}`);
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = objectUrl;
-        link.download = `REALGX_${(wp.title || 'wallpaper').replace(/[^a-z0-9_-]+/gi, '_')}`;
+        link.download = `REALGX_${(wp.title || 'wallpaper').replace(/[^a-z0-9_-]+/gi, '_')}.jpg`;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
         showToast(`Download started: ${wp.title}`, 'success');
       } catch (error) {
-        // Some image hosts do not permit cross-origin fetch. Open the original file instead.
-        window.open(url, '_blank', 'noopener,noreferrer');
-        showToast('Opened the original image in a new tab because direct download was blocked by CORS.', 'info');
+        console.error('REALGX direct download failed:', error);
+        showToast('Download failed. Please try again; the original image was not opened.', 'error');
       }
     }
 
     function executeCanvasDownload(wp, res, tuning, view = { zoom: 1, x: 0, y: 0, rotation: 0 }) {
       showToast(`Rendering ${res.label}...`, 'info');
-
       const canvas = document.getElementById('export-canvas');
+      if (!canvas) { showToast('Export canvas is unavailable. Please refresh and try again.', 'error'); return; }
       const ctx = canvas.getContext('2d');
       const img = new Image();
-      img.crossOrigin = 'anonymous';
 
       img.onload = () => {
-        const cropSizes = {
-          '16:9': { w: 3840, h: 2160 }, '9:16': { w: 2160, h: 3840 },
-          '1:1': { w: 3000, h: 3000 }, '4:5': { w: 2160, h: 2700 },
-          '3:2': { w: 3840, h: 2560 }, '2:3': { w: 2560, h: 3840 },
-          '21:9': { w: 5040, h: 2160 }
-        };
-        const cropSize = cropSizes[view.cropAspect];
-        if (cropSize) { res = { ...res, ...cropSize, label: 'Custom ' + view.cropAspect + ' crop' }; }
-        canvas.width = res.w;
-        canvas.height = res.h;
-        ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
-
-        const hRatio = canvas.width / img.width;
-        const vRatio = canvas.height / img.height;
-        const coverRatio = Math.max(hRatio, vRatio);
-        const coverW = img.width * coverRatio;
-        const coverH = img.height * coverRatio;
-
-        // Soft background fills any empty space without cropping the original wallpaper.
-        ctx.save();
-        ctx.filter = 'blur(48px) brightness(0.48)';
-        ctx.drawImage(img, (canvas.width - coverW) / 2 - 100, (canvas.height - coverH) / 2 - 100, coverW + 200, coverH + 200);
-        ctx.restore();
-
-        // Match source orientation to the selected export orientation when Auto fit & rotate is enabled.
-        const autoRotation = getAutoFitRotation(img.width, img.height, canvas.width, canvas.height, view.autoRotate === true);
-        // Keep preview and exported orientation identical; manual rotation replaces auto-rotation.
-        const effectiveRotation = Number(view.rotation || 0) !== 0 ? Number(view.rotation) : autoRotation;
-        const rotated = Math.abs(effectiveRotation % 180) === 90;
-        const effectiveW = rotated ? img.height : img.width;
-        const effectiveH = rotated ? img.width : img.height;
-        const fitRatio = view.autoFitRotate === false
-          ? Math.max(canvas.width / effectiveW, canvas.height / effectiveH)
-          : Math.min(canvas.width / effectiveW, canvas.height / effectiveH);
-        const drawW = img.width * fitRatio * (view.zoom || 1);
-        const drawH = img.height * fitRatio * (view.zoom || 1);
-        ctx.save();
-        ctx.translate(canvas.width / 2 + ((view.x || 0) / 100) * canvas.width, canvas.height / 2 + ((view.y || 0) / 100) * canvas.height);
-        ctx.rotate((effectiveRotation * Math.PI) / 180);
-        ctx.filter = `brightness(${tuning.brightness}%) contrast(${tuning.contrast}%) saturate(${tuning.saturation}%) hue-rotate(${tuning.hue}deg) blur(${tuning.blur}px)`;
-        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-        ctx.restore();
-
         try {
-          const downloadUrl = canvas.toDataURL('image/jpeg', 0.95);
-          const link = document.createElement('a');
-          const cleanTitle = wp.title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-          link.download = `REALGX_${cleanTitle}_${res.w}x${res.h}.jpg`;
-          link.href = downloadUrl;
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          showToast(`✓ Download started for ${wp.title}!`, 'success');
-        } catch (err) {
-          const link = document.createElement('a');
-          link.download = `REALGX_${wp.id}.jpg`;
-          link.href = wp.data_uri;
-          link.target = '_blank';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          showToast('Downloaded source wallpaper.', 'success');
+          const cropSizes = {
+            '16:9': { w: 3840, h: 2160 }, '9:16': { w: 2160, h: 3840 },
+            '1:1': { w: 3000, h: 3000 }, '4:5': { w: 2160, h: 2700 },
+            '3:2': { w: 3840, h: 2560 }, '2:3': { w: 2560, h: 3840 },
+            '21:9': { w: 5040, h: 2160 }
+          };
+          const cropSize = cropSizes[view.cropAspect];
+          const output = cropSize ? { ...res, ...cropSize, label: 'Custom ' + view.cropAspect + ' crop' } : res;
+          canvas.width = output.w;
+          canvas.height = output.h;
+
+          const effectiveTuning = tuning || { brightness: 100, contrast: 100, saturation: 100, hue: 0, blur: 0 };
+          const autoRotation = getAutoFitRotation(img.width, img.height, canvas.width, canvas.height, view.autoRotate === true);
+          const effectiveRotation = Number(view.rotation || 0) !== 0 ? Number(view.rotation) : autoRotation;
+          const rotated = Math.abs(effectiveRotation % 180) === 90;
+          const effectiveW = rotated ? img.height : img.width;
+          const effectiveH = rotated ? img.width : img.height;
+          const fitRatio = view.autoFitRotate === false
+            ? Math.max(canvas.width / effectiveW, canvas.height / effectiveH)
+            : Math.min(canvas.width / effectiveW, canvas.height / effectiveH);
+          const drawW = img.width * fitRatio * (Number(view.zoom) || 1);
+          const drawH = img.height * fitRatio * (Number(view.zoom) || 1);
+
+          // Render only the selected frame; no blurred filler or external image tab.
+          ctx.save();
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.translate(
+            canvas.width / 2 + ((Number(view.x) || 0) / 100) * canvas.width,
+            canvas.height / 2 + ((Number(view.y) || 0) / 100) * canvas.height
+          );
+          ctx.rotate((effectiveRotation * Math.PI) / 180);
+          ctx.filter = `brightness(${effectiveTuning.brightness}%) contrast(${effectiveTuning.contrast}%) saturate(${effectiveTuning.saturation}%) hue-rotate(${effectiveTuning.hue}deg) blur(${effectiveTuning.blur}px)`;
+          ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.restore();
+
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              showToast('Could not create the wallpaper file. Please try again.', 'error');
+              return;
+            }
+            const objectUrl = URL.createObjectURL(blob);
+            const cleanTitle = (wp.title || 'wallpaper').replace(/[^a-zA-Z0-9_-]+/g, '_').toLowerCase();
+            const link = document.createElement('a');
+            link.href = objectUrl;
+            link.download = `REALGX_${cleanTitle}_${output.w}x${output.h}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+            showToast(`✓ Download started for ${wp.title}!`, 'success');
+          }, 'image/jpeg', 0.95);
+        } catch (error) {
+          console.error('REALGX export rendering failed:', error);
+          showToast('Export failed while rendering. Please try again.', 'error');
         }
       };
 
       img.onerror = () => {
-        showToast('Direct download initiated.', 'info');
-        const link = document.createElement('a');
-        link.download = `REALGX_${wp.id}.jpg`;
-        link.href = wp.data_uri;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
+        showToast('Could not load the wallpaper through REALGX. Please try again in a moment.', 'error');
       };
 
-      img.src = wp.full_url || wp.data_uri;
+      try {
+        img.src = getRealgxImageProxyUrl(wp.full_url || wp.data_uri);
+      } catch (error) {
+        showToast('This wallpaper does not have a valid image URL.', 'error');
+      }
     }
 
     function initFavoritesDrawer() {
