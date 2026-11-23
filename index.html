@@ -148,9 +148,9 @@
         </a>
 
         <!-- Favorites Drawer Trigger -->
-        <button id="favorites-btn" class="relative px-2.5 py-2 sm:p-2.5 text-slate-300 hover:text-pink-400 hover:bg-pink-950/20 border border-slate-800 rounded-xl transition-all flex items-center gap-1.5" title="View Saved Wallpapers">
+        <button id="favorites-btn" class="relative px-2.5 py-2 sm:p-2.5 text-slate-300 hover:text-pink-400 hover:bg-pink-950/20 border border-slate-800 rounded-xl transition-all flex items-center gap-1.5" title="Open your REALGX Library">
           <svg class="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-          <span class="hidden sm:inline text-xs font-medium">Favorites</span>
+          <span class="hidden sm:inline text-xs font-medium">Library</span>
           <span id="fav-count-badge" class="px-1.5 py-0.5 text-[10px] font-bold bg-pink-500 text-white rounded-full min-w-[18px] text-center leading-none">0</span>
         </button>
 
@@ -1171,10 +1171,14 @@
     let currentSort = 'newest';
     let currentSearch = '';
     let favorites = [];
+    let downloadLater = [];
+    let activeLibraryTab = "favorites";
 
     try {
       const favStored = localStorage.getItem('realgx_favorites');
       if (favStored) favorites = JSON.parse(favStored) || [];
+      const laterStored = localStorage.getItem('realgx_download_later');
+      if (laterStored) downloadLater = JSON.parse(laterStored) || [];
     } catch(e) {}
 
     let activeStudioWallpaper = null;
@@ -1439,6 +1443,7 @@
 
       grid.innerHTML = filtered.map(w => {
         const isFav = favorites.includes(w.id);
+        const isLater = downloadLater.includes(w.id);
         const isMobile = w.aspect === '9:16';
         return `
           <div class="glass-card rounded-2xl overflow-hidden flex flex-col group relative break-inside-avoid mb-5 ${w.isUserUpload ? 'border-cyan-500/50 glow-cyan' : ''}">
@@ -1455,6 +1460,9 @@
               <div class="absolute top-3 right-3 flex items-center gap-1.5">
                 <button class="fav-toggle-btn p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700/80 transition-all ${isFav ? 'text-pink-500' : 'text-slate-400 hover:text-pink-400'}" data-id="${w.id}" title="${isFav ? 'Remove Favorite' : 'Save Favorite'}">
                   <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </button>
+                <button class="later-toggle-btn p-2 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-white border border-slate-700/80 transition-all ${isLater ? 'text-cyan-300' : 'text-slate-400 hover:text-cyan-300'}" data-id="${w.id}" title="${isLater ? 'Remove from Download Later' : 'Save to Download Later'}">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 4.75A1.75 1.75 0 017.75 3h8.5A1.75 1.75 0 0118 4.75V21l-6-3.5L6 21V4.75z"/></svg>
                 </button>
               </div>
 
@@ -1511,6 +1519,10 @@
 
       grid.querySelectorAll('.fav-toggle-btn').forEach(btn => {
         btn.onclick = (e) => { e.stopPropagation(); toggleFavorite(btn.getAttribute('data-id')); };
+      });
+
+      grid.querySelectorAll('.later-toggle-btn').forEach(btn => {
+        btn.onclick = (e) => { e.stopPropagation(); toggleDownloadLater(btn.getAttribute('data-id')); };
       });
 
       grid.querySelectorAll('.delete-upload-btn').forEach(btn => {
