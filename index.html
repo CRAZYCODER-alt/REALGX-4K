@@ -1547,27 +1547,34 @@
       showToast(`Removed "${wp.title}" from your uploads.`, 'info');
     }
 
+    function persistLibrary() {
+      try { localStorage.setItem('realgx_favorites', JSON.stringify(favorites)); localStorage.setItem('realgx_download_later', JSON.stringify(downloadLater)); }
+      catch (error) { showToast('Browser storage is full. Some saves may not persist.', 'error'); }
+      updateFavoritesBadge();
+    }
+
     function toggleFavorite(id) {
       const idx = favorites.indexOf(id);
-      if (idx > -1) {
-        favorites.splice(idx, 1);
-        showToast('Removed from favorites', 'info');
-      } else {
-        favorites.push(id);
-        showToast('Saved to your favorites!', 'success');
-      }
-      try { localStorage.setItem('realgx_favorites', JSON.stringify(favorites)); } catch(e) {}
-      updateFavoritesBadge();
-      filterAndRenderWallpapers();
-      renderFavoritesDrawer();
-      updateStudioModalFavButton();
+      if (idx > -1) { favorites.splice(idx, 1); showToast('Removed from Favorites', 'info'); }
+      else { favorites.push(id); showToast('Added to Favorites ♥', 'success'); }
+      persistLibrary(); filterAndRenderWallpapers(); renderFavoritesDrawer(); updateStudioModalFavButton();
+    }
+
+    function toggleDownloadLater(id) {
+      const idx = downloadLater.indexOf(id);
+      if (idx > -1) { downloadLater.splice(idx, 1); showToast('Removed from Download Later', 'info'); }
+      else { downloadLater.push(id); showToast('Saved to Download Later ↓', 'success'); }
+      persistLibrary(); filterAndRenderWallpapers(); renderFavoritesDrawer(); updateStudioModalLaterButton();
     }
 
     function updateFavoritesBadge() {
       const badge = document.getElementById('fav-count-badge');
-      if (badge) badge.textContent = favorites.length;
+      if (badge) badge.textContent = favorites.length + downloadLater.length;
+      const favCount = document.getElementById('library-fav-count');
+      const laterCount = document.getElementById('library-later-count');
+      if (favCount) favCount.textContent = favorites.length;
+      if (laterCount) laterCount.textContent = downloadLater.length;
     }
-
     function initStudioModal() {
       const modal = document.getElementById('studio-modal');
       const closeBtn = document.getElementById('close-modal-btn');
