@@ -2206,81 +2206,41 @@
 
     function initFavoritesDrawer() {
       const drawer = document.getElementById('favorites-drawer');
-      const openBtn = document.getElementById('favorites-btn');
-      const closeBtn = document.getElementById('close-favorites-btn');
-      const doneBtn = document.getElementById('close-drawer-done-btn');
-      const clearBtn = document.getElementById('clear-all-favs-btn');
-
-      openBtn.onclick = () => {
-        renderFavoritesDrawer();
-        drawer.classList.remove('hidden');
-        document.body.style.overflow = 'hidden';
-      };
-
-      const closeDrawer = () => { drawer.classList.add('hidden'); document.body.style.overflow = ''; };
-
-      closeBtn.onclick = closeDrawer;
-      doneBtn.onclick = closeDrawer;
-      drawer.onclick = (e) => { if (e.target === drawer) closeDrawer(); };
-
-      clearBtn.onclick = () => {
-        favorites = [];
-        try { localStorage.removeItem('realgx_favorites'); } catch(e) {}
-        updateFavoritesBadge();
-        renderFavoritesDrawer();
-        filterAndRenderWallpapers();
-        showToast('Cleared all saved favorites.', 'info');
+      const close = () => { drawer.classList.add('hidden'); document.body.style.overflow = ''; };
+      document.getElementById('favorites-btn').onclick = () => { activeLibraryTab = 'favorites'; renderFavoritesDrawer(); drawer.classList.remove('hidden'); document.body.style.overflow = 'hidden'; };
+      document.getElementById('close-favorites-btn').onclick = close;
+      document.getElementById('close-drawer-done-btn').onclick = close;
+      drawer.onclick = e => { if (e.target === drawer) close(); };
+      document.getElementById('library-tab-favorites').onclick = () => { activeLibraryTab = 'favorites'; renderFavoritesDrawer(); };
+      document.getElementById('library-tab-later').onclick = () => { activeLibraryTab = 'later'; renderFavoritesDrawer(); };
+      document.getElementById('clear-all-favs-btn').onclick = () => {
+        if (activeLibraryTab === 'favorites') favorites = []; else downloadLater = [];
+        persistLibrary(); renderFavoritesDrawer(); filterAndRenderWallpapers();
+        showToast('Collection cleared.', 'info');
       };
     }
 
     function renderFavoritesDrawer() {
       const container = document.getElementById('favorites-list-container');
-      const favItems = WALLPAPERS.filter(w => favorites.includes(w.id));
-
-      if (favItems.length === 0) {
-        container.innerHTML = `
-          <div class="h-64 flex flex-col items-center justify-center text-center p-6 space-y-3 text-slate-400">
-            <span class="text-3xl">💔</span>
-            <p class="font-bold text-white text-sm">No favorites saved yet</p>
-            <p class="text-xs">Click the heart icon on any wallpaper card or in the studio to save it for quick access.</p>
-          </div>
-        `;
+      const isFav = activeLibraryTab === 'favorites';
+      const ids = isFav ? favorites : downloadLater;
+      const items = ids.map(id => WALLPAPERS.find(w => w.id === id)).filter(Boolean);
+      const favTab = document.getElementById('library-tab-favorites');
+      const laterTab = document.getElementById('library-tab-later');
+      favTab.classList.toggle('active', isFav); laterTab.classList.toggle('active', !isFav);
+      favTab.classList.toggle('text-slate-500', !isFav); laterTab.classList.toggle('text-slate-500', isFav);
+      document.getElementById('clear-all-favs-btn').textContent = items.length ? 'Clear this collection' : 'Nothing to clear';
+      updateFavoritesBadge();
+      if (!items.length) {
+        container.innerHTML = `<div class="col-span-full min-h-[300px] flex flex-col items-center justify-center text-center rounded-3xl border border-dashed border-slate-700 bg-slate-900/30 p-8"><div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ${isFav ? 'bg-pink-500/10' : 'bg-cyan-500/10'}">${isFav ? '♥' : '↓'}</div><h4 class="mt-4 text-lg font-black text-white">${isFav ? 'Your favorites start here' : 'Your download queue is empty'}</h4><p class="mt-2 max-w-xs text-xs leading-relaxed text-slate-400">${isFav ? 'Tap the heart on any wallpaper to keep it close.' : 'Tap the bookmark ribbon on a wallpaper to save it for later.'}</p><button id="library-explore-btn" class="mt-5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 text-xs font-black">Explore wallpapers</button></div>`;
+        document.getElementById('library-explore-btn').onclick = () => { document.getElementById('favorites-drawer').classList.add('hidden'); document.body.style.overflow = ''; document.getElementById('gallery-section')?.scrollIntoView({behavior:'smooth'}); };
         return;
       }
-
-      container.innerHTML = favItems.map(w => `
-        <div class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-colors">
-          <img src="${w.data_uri}" alt="${w.title}" class="w-16 h-12 object-cover rounded-lg bg-slate-950 flex-shrink-0 cursor-pointer fav-open-studio" data-id="${w.id}">
-          <div class="flex-1 min-w-0">
-            <h5 class="text-xs font-bold text-white truncate cursor-pointer fav-open-studio" data-id="${w.id}">${w.title}</h5>
-            <div class="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
-              <span class="text-cyan-400">${w.category}</span>
-              <span>•</span>
-              <span>${w.aspect}</span>
-            </div>
-          </div>
-          <button class="remove-fav-btn p-1.5 text-slate-400 hover:text-red-400 transition-colors" data-id="${w.id}" title="Remove">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          </button>
-        </div>
-      `).join('');
-
-      container.querySelectorAll('.fav-open-studio').forEach(el => {
-        el.onclick = () => {
-          const wp = WALLPAPERS.find(item => item.id === el.getAttribute('data-id'));
-          if (wp) {
-            document.getElementById('favorites-drawer').classList.add('hidden');
-            document.body.style.overflow = '';
-            openStudioModal(wp);
-          }
-        };
-      });
-
-      container.querySelectorAll('.remove-fav-btn').forEach(btn => {
-        btn.onclick = () => toggleFavorite(btn.getAttribute('data-id'));
-      });
+      container.innerHTML = items.map(w => `<article class="library-item group overflow-hidden rounded-2xl border border-white/10 bg-slate-900/70 hover:border-cyan-400/40 transition-all"><button class="fav-open-studio relative block w-full aspect-[16/10] overflow-hidden text-left" data-id="${w.id}"><img src="${w.data_uri}" alt="${w.title}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"><span class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent"></span><span class="absolute bottom-3 left-3 right-3 text-sm font-extrabold text-white truncate">${w.title}</span><span class="absolute top-3 left-3 px-2 py-1 rounded-full bg-black/55 text-[9px] uppercase tracking-wider font-bold text-cyan-200">${w.category || 'Wallpaper'}</span></button><div class="p-3"><div class="flex items-center justify-between gap-2 text-[10px] text-slate-400"><span>${w.aspect || 'Original'} · ${w.res || 'HD'}</span><span class="${isFav ? 'text-pink-300' : 'text-cyan-300'}">${isFav ? '♥ Saved' : '↓ Queued'}</span></div><div class="grid grid-cols-[1fr_auto_auto] gap-2 mt-3"><button class="fav-open-studio rounded-lg bg-slate-800 hover:bg-slate-700 px-3 py-2 text-[11px] font-bold text-white" data-id="${w.id}">Open Studio</button><button class="library-download-btn rounded-lg bg-gradient-to-r from-cyan-400 to-blue-500 px-3 py-2 text-[11px] font-black text-slate-950" data-id="${w.id}" title="Download wallpaper">↓</button><button class="library-remove-btn rounded-lg border border-white/10 hover:border-red-400/40 hover:text-red-300 px-3 py-2 text-[11px] text-slate-400" data-id="${w.id}" title="Remove from collection">×</button></div></div></article>`).join('');
+      container.querySelectorAll('.fav-open-studio').forEach(el => el.onclick = () => { const wp = WALLPAPERS.find(w => w.id === el.dataset.id); if (wp) { document.getElementById('favorites-drawer').classList.add('hidden'); document.body.style.overflow = ''; openStudioModal(wp); } });
+      container.querySelectorAll('.library-download-btn').forEach(btn => btn.onclick = () => { const wp = WALLPAPERS.find(w => w.id === btn.dataset.id); if (wp) executeDirectDownload(wp); });
+      container.querySelectorAll('.library-remove-btn').forEach(btn => btn.onclick = () => isFav ? toggleFavorite(btn.dataset.id) : toggleDownloadLater(btn.dataset.id));
     }
-
     function initGuideTabs() {
       const guideData = {
         win: `
