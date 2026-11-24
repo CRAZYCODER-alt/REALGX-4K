@@ -67,7 +67,7 @@
         <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
           <div class="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(240px,.8fr)] gap-4">
-            <div class="min-w-0 space-y-2"><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option value="">No images imported</option></select><span id="editor-image-count" class="text-[10px] text-slate-500 whitespace-nowrap">0 images</span></div>
+            <div class="min-w-0 space-y-2"><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option value="">No images imported</option></select><button type="button" id="delete-queued-image" class="shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-900/50 disabled:opacity-40 disabled:cursor-not-allowed" disabled>Delete image</button><span id="editor-image-count" class="text-[10px] text-slate-500 whitespace-nowrap">0 images</span></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
             <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses a dedicated 4-way rotation classifier on this device (0°, 90°, 180°, 270°). The model downloads once and is cached by your browser when storage allows.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
@@ -172,6 +172,7 @@
       select.append(option);
     });
     select.disabled=false;
+    $('delete-queued-image').disabled=false;
     $('editor-image-count').textContent=selectedFiles.length+' image'+(selectedFiles.length===1?'':'s');
     const targetIndex=append&&firstNewIndex>0&&currentEditorIndex<selectedFiles.length?currentEditorIndex:Math.max(0,firstNewIndex);
     currentEditorIndex=targetIndex;
@@ -574,6 +575,42 @@
       editorRenderToken++;
       prepareEditorImage(index);
     }
+  });
+  $('delete-queued-image').addEventListener('click',async()=>{
+    if(!selectedFiles.length||currentEditorIndex<0||currentEditorIndex>=selectedFiles.length)return;
+    const removedIndex=currentEditorIndex;
+    const removedName=selectedFiles[removedIndex]?.name||'Image';
+    editorRenderToken++;
+    imageBitmaps[removedIndex]?.close?.();
+    selectedFiles.splice(removedIndex,1);
+    imageStates.splice(removedIndex,1);
+    imageBitmaps.splice(removedIndex,1);
+    $('review-approved').checked=false;
+    $('review-approved').disabled=true;
+    $('upload-btn').disabled=true;
+    const select=$('editor-file-select');
+    select.replaceChildren();
+    selectedFiles.forEach((file,index)=>{
+      const option=document.createElement('option');
+      option.value=String(index);
+      option.textContent=String(index+1).padStart(2,'0')+' · '+file.name;
+      select.append(option);
+    });
+    $('editor-image-count').textContent=selectedFiles.length+' image'+(selectedFiles.length===1?'':'s');
+    $('delete-queued-image').disabled=!selectedFiles.length;
+    renderSelected();
+    if(!selectedFiles.length){
+      currentEditorIndex=0;
+      select.disabled=true;
+      const option=document.createElement('option');option.value='';option.textContent='No images imported';select.append(option);
+      clearEditor();
+    }else{
+      currentEditorIndex=Math.min(removedIndex,selectedFiles.length-1);
+      select.disabled=false;
+      select.value=String(currentEditorIndex);
+      await prepareEditorImage(currentEditorIndex);
+    }
+    log('Removed '+removedName+' from the import queue.','success');
   });
   $('bulk-import-btn').addEventListener('click',()=>$('bulk-files').click());
   $('bulk-files').addEventListener('change',e=>{
