@@ -204,6 +204,7 @@
     $('editor-empty').classList.remove('hidden');$('analysis-status').textContent='Waiting for image';
     $('editor-dimensions').textContent='Image details will appear here.';
     $('analysis-details').textContent='Choose an image to inspect resolution, aspect ratio and orientation metadata.';
+    if($('upscale-run')){$('upscale-run').disabled=true;$('upscale-download').disabled=true;$('upscale-source-preview').removeAttribute('src');$('upscale-result-preview').removeAttribute('src');$('upscale-dimensions').textContent='';$('upscale-status').textContent='Import an image to enable upscaling.';}
     hideOrientationCandidates();
   }
   async function readExifOrientation(file){
@@ -637,7 +638,7 @@
       button.addEventListener('click',()=>{
         if(index!==currentEditorIndex||!imageStates[index])return;
         const state=imageStates[index];
-        clearUpscaleResult(state);
+        clearUpscaleResult(state);$('review-approved').checked=false;$('upload-btn').disabled=true;
         applyRelativeEditorTransform(state,angle,flipX);
         const choice=orientationCandidateLabel(angle,flipX);
         state.analysis.orientationCheck={status:'corrected',method:'manual-eight-way-review',angle,flipX, message:'You selected '+choice+' from the eight visual candidates. Review the main preview before publishing.'};
@@ -698,7 +699,7 @@
   }
 
   function currentState(){return imageStates[currentEditorIndex];}
-  function updateEditor(change){const s=currentState();if(!s)return;clearUpscaleResult(s);change(s);renderEditor();}
+  function updateEditor(change){const s=currentState();if(!s)return;clearUpscaleResult(s);$('review-approved').checked=false;$('upload-btn').disabled=true;change(s);renderEditor();}
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
   $('editor-file-select').addEventListener('change',e=>{
@@ -764,7 +765,7 @@
   $('editor-zoom').addEventListener('input',e=>updateEditor(s=>s.zoom=Number(e.target.value)/100));
   $('editor-x').addEventListener('input',e=>updateEditor(s=>s.x=Number(e.target.value)));
   $('editor-y').addEventListener('input',e=>updateEditor(s=>s.y=Number(e.target.value)));
-  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;clearUpscaleResult(s);const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
+  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;clearUpscaleResult(s);$('review-approved').checked=false;$('upload-btn').disabled=true;const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
   function editorChanged(s){return !!(s.rotation||s.flipX||s.flipY||s.zoom!==1||s.x||s.y||s.exifOrientation!==1);}
   async function canvasBlob(canvas,type){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render adjusted image.')),type,/image\/jpeg|image\/webp/.test(type)?0.94:undefined));}
   async function getAdjustedFile(file,index){
@@ -936,6 +937,7 @@
     const index=currentEditorIndex,state=imageStates[index],file=selectedFiles[index];
     if(!file||!state||upscalerBusy)return;
     upscalerBusy=true;$('upscale-run').disabled=true;$('upscale-download').disabled=true;
+    $('review-approved').checked=false;$('upload-btn').disabled=true;
     clearUpscaleResult(state);
     let sourceBitmap=null,adjustedFile=null,resultCanvas=null;
     try{
