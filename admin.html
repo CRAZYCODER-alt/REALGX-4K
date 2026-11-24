@@ -13,7 +13,7 @@
     .field:focus{outline:2px solid #06b6d4;outline-offset:1px}
     .drop-active{border-color:#22d3ee!important;background:#083344!important}
     .tool-btn{border:1px solid #334155;border-radius:.65rem;padding:.55rem .45rem;font-size:11px;font-weight:700;color:#dbeafe;background:#10182a}
-    .tool-btn:hover{border-color:#22d3ee;background:#123047}
+    .tool-btn:hover{border-color:#22d3ee;background:#123047}\n    .analysis-details{max-height:116px;overflow:auto;padding-right:3px}\n    .analysis-details p{margin:0 0 3px}
   </style>
 </head>
 <body class="min-h-screen">
@@ -70,7 +70,7 @@
             <div class="min-w-0 space-y-2"><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option value="">No images imported</option></select><button type="button" id="delete-queued-image" class="shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-900/50 disabled:opacity-40 disabled:cursor-not-allowed" disabled>Delete image</button><span id="editor-image-count" class="text-[10px] text-slate-500 whitespace-nowrap">0 images</span></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
-            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses on-device AI for rotation and OCR-based mirror checks. When mirror direction cannot be verified, compare all eight visual orientations below and choose the correct one. No uncertain flip is applied automatically.</p></div><div id="orientation-candidates" class="hidden rounded-lg border border-amber-500/30 bg-amber-950/10 p-2 space-y-2"><p class="text-[11px] font-bold text-amber-200">Compare all 8 possible orientations</p><p class="text-[10px] text-slate-400">Choose the preview that looks correct. Your original file remains unchanged until you approve publishing.</p><div id="orientation-candidate-grid" class="grid grid-cols-4 gap-2"></div></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
+            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device</span></div><div id="analysis-details" class="analysis-details space-y-1 text-[11px] leading-snug text-slate-300"><p>Automatic rotation check. Mirror direction is not reliably detectable for every wallpaper, so use the flip controls if needed.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Check rotation</button><div class="grid grid-cols-2 gap-2"><button type="button" id="flip-x-quick" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y-quick" class="tool-btn">↕ Flip vertical</button></div><p class="text-[10px] leading-snug text-slate-500">Rotation is automatic when confidence is high. For mirrored artwork, choose a flip and review the preview before publishing.</p></div>
               <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -551,19 +551,6 @@
     return await createImageBitmap(canvas);
   }
 
-  function makeMirrorCandidateCanvas(bitmap,angle,flipX){
-    const swapped=Math.abs(angle)%180===90;
-    const canvas=document.createElement('canvas');
-    canvas.width=swapped?bitmap.height:bitmap.width;
-    canvas.height=swapped?bitmap.width:bitmap.height;
-    const ctx=canvas.getContext('2d');
-    ctx.translate(canvas.width/2,canvas.height/2);
-    ctx.rotate(angle*Math.PI/180);
-    ctx.scale(flipX?-1:1,1);
-    ctx.drawImage(bitmap,-bitmap.width/2,-bitmap.height/2);
-    return canvas;
-  }
-
   function editorTransformMatrix(rotation,flipX,flipY){
     const radians=rotation*Math.PI/180,cos=Math.round(Math.cos(radians)),sin=Math.round(Math.sin(radians));
     const sx=flipX?-1:1,sy=flipY?-1:1;
@@ -583,106 +570,23 @@
     Object.assign(state,best);
   }
 
-  async function detectMirrorCorrection(bitmap){
-    let worker;
-    try{worker=await getOcrWorker();}
-    catch(error){log('On-device mirror check unavailable; continuing with rotation analysis. '+(error?.message||error),'warn');return {status:'review',reason:'Mirror direction could not be checked on this device.'};}
-    const candidates=[];
-    for(const flipX of [false,true])for(const angle of [0,90,180,270]){
-      $('analysis-status').textContent='Checking mirror direction… '+(candidates.length+1)+'/8';
-      const sample=makeMirrorCandidateCanvas(bitmap,angle,flipX);
-      const result=await worker.recognize(sample);
-      candidates.push({angle,flipX,...scoreOcrResult(result.data||{})});
-    }
-    candidates.sort((a,b)=>b.score-a.score);
-    const best=candidates[0],second=candidates[1];
-    const enoughText=best&&best.chars>=8&&best.words>=2;
-    const clearLead=best&&best.confidence>=55&&second&&best.score-second.score>=12;
-    if(!enoughText||!clearLead)return {status:'review',reason:'There was not enough clearly readable text to verify whether the image is mirrored.'};
-    if(!best.flipX)return {status:'clear'};
-    return {status:'corrected',angle:best.angle,flipX:true,confidence:Number(best.confidence.toFixed(1)),margin:Number((best.score-second.score).toFixed(1)),recognizedText:best.text};
-  }
-  function hideOrientationCandidates(){
-    const panel=$('orientation-candidates'),grid=$('orientation-candidate-grid');
-    if(panel)panel.classList.add('hidden');
-    if(grid)grid.replaceChildren();
-  }
-
-  function orientationCandidateLabel(angle,flipX){
-    if(!flipX)return angle+'°';
-    if(angle===0)return 'Horizontal mirror';
-    if(angle===180)return 'Vertical mirror';
-    return 'Mirror + '+angle+'°';
-  }
-
-  function drawOrientationThumbnail(bitmap,angle,flipX){
-    const canvas=document.createElement('canvas');canvas.width=112;canvas.height=132;
-    const ctx=canvas.getContext('2d');ctx.fillStyle='#080d1b';ctx.fillRect(0,0,canvas.width,canvas.height);
-    const swapped=Math.abs(angle)%180===90,visualW=swapped?bitmap.height:bitmap.width,visualH=swapped?bitmap.width:bitmap.height;
-    const scale=Math.min(92/visualW,108/visualH);
-    ctx.save();ctx.translate(canvas.width/2,canvas.height/2);ctx.rotate(angle*Math.PI/180);ctx.scale(flipX?-1:1,1);
-    ctx.drawImage(bitmap,-bitmap.width*scale/2,-bitmap.height*scale/2,bitmap.width*scale,bitmap.height*scale);ctx.restore();
-    return canvas;
-  }
-
-  function showOrientationCandidates(bitmap,index){
-    const panel=$('orientation-candidates'),grid=$('orientation-candidate-grid');
-    if(!panel||!grid||!bitmap)return;
-    grid.replaceChildren();
-    for(const flipX of [false,true])for(const angle of [0,90,180,270]){
-      const button=document.createElement('button');
-      button.type='button';button.className='min-w-0 rounded-lg border border-slate-700 bg-slate-900 p-1 hover:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400';
-      const thumb=drawOrientationThumbnail(bitmap,angle,flipX);thumb.className='block w-full h-auto rounded';
-      const label=document.createElement('span');label.className='block mt-1 text-[9px] leading-tight text-slate-200';label.textContent=orientationCandidateLabel(angle,flipX);
-      button.append(thumb,label);
-      button.addEventListener('click',()=>{
-        if(index!==currentEditorIndex||!imageStates[index])return;
-        const state=imageStates[index];
-        clearUpscaleResult(state);$('review-approved').checked=false;$('upload-btn').disabled=true;
-        applyRelativeEditorTransform(state,angle,flipX);
-        const choice=orientationCandidateLabel(angle,flipX);
-        state.analysis.orientationCheck={status:'corrected',method:'manual-eight-way-review',angle,flipX, message:'You selected '+choice+' from the eight visual candidates. Review the main preview before publishing.'};
-        hideOrientationCandidates();renderEditor();
-      });
-      grid.append(button);
-    }
-    panel.classList.remove('hidden');
-  }
-
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];
     if(!state||!bitmap||!state.analysis||orientationRunningIndices.has(index))return;
     orientationRunningIndices.add(index);
-    hideOrientationCandidates();
     let analysisBitmap=null;
     if(index===currentEditorIndex){
       const button=$('auto-orient-current');
       button.disabled=true;button.setAttribute('aria-busy','true');
-      button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
+      button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Checking rotation…</span>';
       renderEditor();
     }
     try{
       analysisBitmap=await makeCurrentViewBitmap(bitmap,state);
-      let mirrorResult=null;
-      try{mirrorResult=await detectMirrorCorrection(analysisBitmap);}
-      catch(error){log('Mirror analysis could not complete; continuing with rotation analysis. '+(error?.message||error),'warn');mirrorResult={status:'review',reason:'Mirror direction could not be verified.'};}
-      if(mirrorResult?.status==='corrected'){
-        applyRelativeEditorTransform(state,mirrorResult.angle,mirrorResult.flipX);
-        state.analysis.orientationCheck={status:'corrected',method:'ocr-mirror',angle:mirrorResult.angle,flipX:true,confidence:mirrorResult.confidence,margin:mirrorResult.margin,recognizedText:mirrorResult.recognizedText,message:'On-device text analysis detected a mirrored image and corrected its orientation. Please review the preview.'};
-      }else{
-        const result=await runWholeImageOrientation(analysisBitmap);
-        if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
-        if(mirrorResult?.status==='review'){
-          result.status='review';
-          result.message=(result.message||'Rotation analysis finished.')+' '+mirrorResult.reason+' Please check horizontal and vertical direction manually before publishing.';
-          result.mirrorCheck='manual-review';
-        }
-        state.analysis.orientationCheck=result;
-        if(mirrorResult?.status==='review'){
-          const candidateBase=await makeCurrentViewBitmap(bitmap,state);
-          try{showOrientationCandidates(candidateBase,index);}finally{candidateBase.close?.();}
-        }
-      }
+      const result=await runWholeImageOrientation(analysisBitmap);
+      if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
+      result.message=(result.message||'Rotation analysis finished.')+' Mirror direction is not checked automatically; use Flip horizontal or Flip vertical if the image is mirrored.';
+      state.analysis.orientationCheck=result;
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',method:'rotation-model',message:'The on-device rotation model could not load or run. The image was left unchanged for manual review.'};
       log('On-device rotation model unavailable: '+(error?.message||error),'error');
@@ -692,7 +596,7 @@
       if(index===currentEditorIndex){
         const button=$('auto-orient-current');
         button.disabled=false;button.removeAttribute('aria-busy');
-        button.textContent='↻ Re-run AI orientation check';
+        button.textContent='↻ Check rotation';
         renderEditor();
       }
     }
@@ -762,6 +666,8 @@
   $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
   $('flip-x').addEventListener('click',()=>updateEditor(s=>s.flipX=!s.flipX));
   $('flip-y').addEventListener('click',()=>updateEditor(s=>s.flipY=!s.flipY));
+  $('flip-x-quick').addEventListener('click',()=>updateEditor(s=>s.flipX=!s.flipX));
+  $('flip-y-quick').addEventListener('click',()=>updateEditor(s=>s.flipY=!s.flipY));
   $('editor-zoom').addEventListener('input',e=>updateEditor(s=>s.zoom=Number(e.target.value)/100));
   $('editor-x').addEventListener('input',e=>updateEditor(s=>s.x=Number(e.target.value)));
   $('editor-y').addEventListener('input',e=>updateEditor(s=>s.y=Number(e.target.value)));
