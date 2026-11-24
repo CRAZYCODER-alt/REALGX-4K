@@ -163,7 +163,7 @@
     select.replaceChildren();
     if(!selectedFiles.length){
       const option=document.createElement('option');option.value='';option.textContent='No images imported';select.append(option);
-      select.disabled=true;$('editor-image-count').textContent='0 images';clearEditor();return;
+      select.disabled=true;$('delete-queued-image').disabled=true;$('editor-image-count').textContent='0 images';clearEditor();return;
     }
     selectedFiles.forEach((file,index)=>{
       const option=document.createElement('option');
