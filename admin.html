@@ -108,6 +108,7 @@
   let editorRenderToken = 0;
   let faceDetectorPromise = null;
   let ocrWorkerPromise = null;
+  let osdWorkerPromise = null;
   let tesseractScriptPromise = null;
 
   function log(message, kind='info') {
@@ -288,6 +289,30 @@
     }
     try{return await ocrWorkerPromise;}catch(error){ocrWorkerPromise=null;throw error;}
   }
+  async function getOsdWorker(){
+    if(!osdWorkerPromise){
+      osdWorkerPromise=(async()=>{
+        const Tesseract=await loadTesseract();
+        return await Tesseract.createWorker('eng',0,{
+          legacyCore:true,
+          legacyLang:true,
+          logger:m=>{
+            if(m.status==='loading tesseract core')$('analysis-status').textContent='Loading orientation detector…';
+          }
+        });
+      })();
+    }
+    try{return await osdWorkerPromise;}catch(error){osdWorkerPromise=null;throw error;}
+  }
+  async function runOsdOrientation(bitmap){
+    const worker=await getOsdWorker();
+    $('analysis-status').textContent='Checking page orientation…';
+    const {data}=await worker.detect(makeRotatedAnalysisCanvas(bitmap,0,1600));
+    const degrees=Number(data?.orientation_degrees);
+    const confidence=Number(data?.orientation_confidence);
+    if(![0,90,180,270].includes(degrees)||!Number.isFinite(confidence)||confidence<5)return null;
+    return {angle:degrees,confidence:Number(confidence.toFixed(1)),script:data?.script||'unknown'};
+  }
   function scoreOcrResult(data){
     // Keep Unicode letters and digits; use real whitespace regexes.
     // The previous double-escaped patterns removed valid OCR characters.
@@ -300,25 +325,38 @@
     return {score,confidence,chars,words,text:text.slice(0,100)};
   }
   async function runOcrOrientation(bitmap){
+    // Prefer Tesseract's dedicated Orientation & Script Detection (OSD).
+    // OCR confidence alone is not proof that text is upright.
+    try{
+      const osd=await runOsdOrientation(bitmap);
+      if(osd){
+        if(osd.angle===0){
+          return {status:'upright',method:'osd',angle:0,confidence:osd.confidence,message:'On-device orientation detection indicates that this image is upright.',script:osd.script};
+        }
+        return {status:'corrected',method:'osd',angle:osd.angle,confidence:osd.confidence,message:'On-device orientation detection recommends a '+osd.angle+'° correction.',script:osd.script};
+      }
+    }catch(error){
+      log('Dedicated orientation detection unavailable; using OCR comparison: '+error.message,'warn');
+    }
     const worker=await getOcrWorker(),candidates=[];
     for(const angle of [0,90,180,270]){
-      $('analysis-status').textContent='Checking text orientation '+angle+'°…';
-      const sample=makeRotatedAnalysisCanvas(bitmap,angle,1200);
+      $('analysis-status').textContent='Comparing readable text at '+angle+'°…';
+      const sample=makeRotatedAnalysisCanvas(bitmap,angle,1600);
       const result=await worker.recognize(sample);
       candidates.push({angle,...scoreOcrResult(result.data||{})});
     }
     candidates.sort((a,b)=>b.score-a.score);
     const best=candidates[0],second=candidates[1];
     const enoughText=best&&best.chars>=8&&best.words>=2;
-    const clearLead=best&&best.confidence>=42&&(!second||best.score-second.score>=8);
-    const diagnostics=candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(1)),characters:c.chars,words:c.words}));
+    const clearLead=best&&best.confidence>=50&&(!second||best.score-second.score>=12);
+    const diagnostics=candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(1)),characters:c.chars,words:c.words,score:Number(c.score.toFixed(1))}));
     if(!enoughText||!clearLead){
-      return {status:'review',method:'ocr',message:enoughText?'Text was found, but its orientation was not clear enough to rotate safely.':'OCR could not find enough readable text to determine orientation. The image was left unchanged.',candidates:diagnostics};
+      return {status:'review',method:'ocr',message:'Text recognition could not establish a reliable upright direction. The image was left unchanged for manual review.',candidates:diagnostics};
     }
     if(best.angle===0){
-      return {status:'upright',method:'ocr',angle:0,confidence:Number(best.confidence.toFixed(1)),message:'On-device text recognition indicates that this image is already upright.',candidates:diagnostics};
+      return {status:'review',method:'ocr',message:'OCR can read text, but cannot independently confirm that the image is upright. Please review the preview.',candidates:diagnostics};
     }
-    return {status:'corrected',method:'ocr',angle:best.angle,confidence:Number(best.confidence.toFixed(1)),message:'On-device text recognition found a clearer reading orientation and rotated the image '+best.angle+'°.',recognizedText:best.text,candidates:diagnostics};
+    return {status:'corrected',method:'ocr',angle:best.angle,confidence:Number(best.confidence.toFixed(1)),message:'Text recognition strongly favours a '+best.angle+'° correction. Please verify the preview.',recognizedText:best.text,candidates:diagnostics};
   }
   function makeRotatedAnalysisCanvas(bitmap,angle,maxDimension=640){
     const swap=angle===90||angle===270,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
