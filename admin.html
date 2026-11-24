@@ -263,12 +263,22 @@
     return c;
   }
   function scoreFaceOrientation(detection){
+    // MediaPipe keypoints: right eye, left eye, nose tip, mouth centre,
+    // then two ears. Use normalized vertical anatomy, not x-axis eye slope,
+    // because the face may be sideways in the source image.
     const points=detection.keypoints||[];if(points.length<4)return null;
-    const [eyeA,eyeB,nose,mouth]=points,eyeY=(eyeA.y+eyeB.y)/2;
-    const eyeSpread=Math.max(.0001,Math.abs(eyeA.x-eyeB.x)),eyeSlope=Math.abs(eyeA.y-eyeB.y)/eyeSpread;
+    const [eyeA,eyeB,nose,mouth]=points;
+    const eyeY=(eyeA.y+eyeB.y)/2;
+    const eyeSpan=Math.max(.0001,Math.hypot(eyeA.x-eyeB.x,eyeA.y-eyeB.y));
+    const noseDrop=(nose.y-eyeY)/eyeSpan;
+    const mouthDrop=(mouth.y-nose.y)/eyeSpan;
     const confidence=Number(detection.categories?.[0]?.score||0);
-    const score=confidence*.55+(nose.y>eyeY?.18:0)+(mouth.y>nose.y?.18:0)+(eyeSlope<.45?.09:0);
-    return {score,confidence,focus:{x:Number(((eyeA.x+eyeB.x+nose.x+mouth.x)/4).toFixed(4)),y:Number(((eyeA.y+eyeB.y+nose.y+mouth.y)/4).toFixed(4))}};
+    // Strongly reward the expected eyes -> nose -> mouth order.
+    const eyeToNose=Math.max(0,Math.min(1,(noseDrop-.05)/.55));
+    const noseToMouth=Math.max(0,Math.min(1,(mouthDrop-.02)/.45));
+    const uprightness=eyeToNose*.55+noseToMouth*.45;
+    const score=uprightness*.78+confidence*.22;
+    return {score,confidence,uprightness,noseDrop,mouthDrop,focus:{x:Number(((eyeA.x+eyeB.x+nose.x+mouth.x)/4).toFixed(4)),y:Number(((eyeA.y+eyeB.y+nose.y+mouth.y)/4).toFixed(4))}};
   }
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
@@ -278,22 +288,25 @@
       for(const angle of [0,90,180,270]){
         const sample=makeRotatedAnalysisCanvas(bitmap,angle),result=detector.detect(sample);
         let best=null;
-        for(const detection of (result.detections||[])){const scored=scoreFaceOrientation(detection);if(scored&&(!best||scored.score>best.score))best=scored;}
+        for(const detection of (result.detections||[])){
+          const scored=scoreFaceOrientation(detection);
+          if(scored&&scored.confidence>=.35&&(!best||scored.score>best.score))best=scored;
+        }
         if(best)candidates.push({angle,...best});
       }
       candidates.sort((a,b)=>b.score-a.score);
       const best=candidates[0],second=candidates[1];
-      if(!best||best.score<.78){
-        state.analysis.orientationCheck={status:'review',message:'No clear upright face was detected. The image was left unchanged; please review it manually.'};
+      if(!best||best.confidence<.35||best.uprightness<.58){
+        state.analysis.orientationCheck={status:'review',message:'No confidently oriented human face was found in this image. Face-based rotation cannot reliably judge scenery, objects or many illustrations, so the image was left unchanged.',candidates:candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(2)),uprightness:Number(c.uprightness.toFixed(2))}))};
+      }else if(second&&best.score-second.score<.07){
+        state.analysis.orientationCheck={status:'review',message:'More than one rotation looks plausible to the face detector. No automatic rotation was applied.',candidates:candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(2)),uprightness:Number(c.uprightness.toFixed(2))}))};
       }else if(best.angle===0){
         state.analysis.orientationCheck={status:'upright',angle:0,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks indicate that this image is already upright.'};
         state.analysis.subjectFocus=best.focus;
-      }else if(!second||best.score-second.score>=.08){
+      }else{
         state.rotation=best.angle;
         state.analysis.orientationCheck={status:'corrected',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),message:'AI detected an incorrectly oriented face and applied a '+best.angle+'° correction.'};
         state.analysis.subjectFocus=best.focus;
-      }else{
-        state.analysis.orientationCheck={status:'review',message:'Face orientation is ambiguous. No automatic rotation was applied; please review it manually.'};
       }
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',message:'On-device face analysis could not load. EXIF and resolution checks are complete; please review orientation manually.'};
