@@ -148,10 +148,12 @@
     for(let index=1;index<selectedFiles.length;index++){
       try{
         $('analysis-status').textContent='AI analysis '+(index+1)+' of '+selectedFiles.length+'…';
-        const [bitmap,orientation]=await Promise.all([createImageBitmap(selectedFiles[index]),readExifOrientation(selectedFiles[index])]);
-        imageBitmaps[index]=bitmap;imageStates[index].exifOrientation=orientation;
-        imageStates[index].analysis=describeAnalysis(bitmap,orientation);
-        await runAutoOrientation(index);
+        if(!imageBitmaps[index]){
+          const [bitmap,orientation]=await Promise.all([createImageBitmap(selectedFiles[index]),readExifOrientation(selectedFiles[index])]);
+          imageBitmaps[index]=bitmap;imageStates[index].exifOrientation=orientation;
+          imageStates[index].analysis=describeAnalysis(bitmap,orientation);
+        }
+        if(!imageStates[index].analysis?.orientationCheck)await runAutoOrientation(index);
       }catch(error){
         imageStates[index].analysis=imageStates[index].analysis||{width:0,height:0,ratio:0,kind:'Unknown',quality:'Not analyzed',orientation:1};
         imageStates[index].analysis.orientationCheck={status:'review',message:'Automatic analysis could not process this file. Please inspect it manually.'};
@@ -283,7 +285,7 @@
         state.analysis.orientationCheck={status:'upright',angle:0,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks indicate that this image is already upright.'};
         state.analysis.subjectFocus=best.focus;
       }else if(!second||best.score-second.score>=.08){
-        state.rotation=(state.rotation+best.angle)%360;
+        state.rotation=best.angle;
         state.analysis.orientationCheck={status:'corrected',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),message:'AI detected an incorrectly oriented face and applied a '+best.angle+'° correction.'};
         state.analysis.subjectFocus=best.focus;
       }else{
