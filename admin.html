@@ -289,9 +289,12 @@
     try{return await ocrWorkerPromise;}catch(error){ocrWorkerPromise=null;throw error;}
   }
   function scoreOcrResult(data){
-    const text=String(data.text||'').replace(/[^\\p{L}\\p{N}]+/gu,' ').trim();
-    const chars=text.replace(/\\s/g,'').length;
-    const words=text.split(/\\s+/).filter(Boolean).length;
+    // Keep Unicode letters and digits; use real whitespace regexes.
+    // The previous double-escaped patterns removed valid OCR characters.
+    const raw=String(data.text||'');
+    const text=raw.replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    const chars=text.replace(/\s/g,'').length;
+    const words=text.split(/\s+/).filter(Boolean).length;
     const confidence=Number(data.confidence||0);
     const score=confidence*(.55+.45*Math.min(1,chars/18))+Math.min(words,8)*1.2;
     return {score,confidence,chars,words,text:text.slice(0,100)};
