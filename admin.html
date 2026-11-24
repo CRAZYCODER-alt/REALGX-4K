@@ -557,7 +557,7 @@
   }
 
   $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
-  $('files').addEventListener('change', e => setFiles(e.target.files));
+  $('files').addEventListener('change', e => { const files=Array.from(e.target.files||[]); e.target.value=''; setFiles(files); });
   ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name, e => {
     e.preventDefault(); $('dropzone').classList.add('drop-active');
   }));
