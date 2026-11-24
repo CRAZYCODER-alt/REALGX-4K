@@ -229,7 +229,7 @@
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
     ctx.drawImage(bitmap,-w*fit/2,-h*fit/2,w*fit,h*fit);ctx.restore();
     const a=state.analysis,orientationCheck=a.orientationCheck;
-    $('analysis-status').textContent=orientationRunningIndex===currentEditorIndex?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Analysis complete';
+    $('analysis-status').textContent=orientationRunningIndex===currentEditorIndex?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Ready for AI analysis';
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
@@ -469,41 +469,43 @@
     const input=new orientationRuntime.Tensor('float32',tensorData,[1,3,384,384]);
     const inferenceTask=orientationInferenceQueue.then(()=>session.run({[inputName]:input}));
     orientationInferenceQueue=inferenceTask.then(()=>undefined,()=>undefined);
-    const output=await inferenceTask;
-    const logits=Array.from(output[outputName]?.data||[]);
-    if(logits.length!==4||logits.some(value=>!Number.isFinite(Number(value)))){
-      throw new Error('The orientation model returned an unexpected result.');
+    let output;
+    try{
+      output=await inferenceTask;
+      const logits=Array.from(output[outputName]?.data||[]);
+      if(logits.length!==4||logits.some(value=>!Number.isFinite(Number(value)))){
+        throw new Error('The orientation model returned an unexpected result.');
+      }
+      const maxLogit=Math.max(...logits);
+      const exps=logits.map(value=>Math.exp(value-maxLogit));
+      const total=exps.reduce((sum,value)=>sum+value,0);
+      const probabilities=exps.map(value=>value/total);
+      const ranking=probabilities.map((confidence,index)=>({classIndex:index,angle:[0,90,180,270][index],confidence}))
+        .sort((a,b)=>b.confidence-a.confidence);
+      const best=ranking[0],second=ranking[1],margin=best.confidence-second.confidence;
+      const diagnostics=ranking.map(item=>({angle:item.angle,confidence:Number(item.confidence.toFixed(3))}));
+      if(!best||best.confidence<0.70||margin<0.20){
+        return {status:'review',method:'rotation-model',message:'The AI confidence is not strong enough to rotate safely. The image was left unchanged for manual review.',candidates:diagnostics,confidence:Number((best?.confidence||0).toFixed(3)),margin:Number(margin.toFixed(3))};
+      }
+      if(best.angle===0){
+        return {status:'upright',method:'rotation-model',angle:0,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI predicts this image is already upright.',candidates:diagnostics};
+      }
+      return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI automatically applied '+(best.angle===270?'90° counterclockwise':best.angle+'° clockwise')+' rotation. Check the preview before publishing.',candidates:diagnostics};
+    }finally{
+      input.dispose?.();
+      if(output)Object.values(output).forEach(tensor=>tensor?.dispose?.());
     }
-    const maxLogit=Math.max(...logits);
-    const exps=logits.map(value=>Math.exp(value-maxLogit));
-    const total=exps.reduce((sum,value)=>sum+value,0);
-    const probabilities=exps.map(value=>value/total);
-    const ranking=probabilities.map((confidence,index)=>({classIndex:index,angle:[0,90,180,270][index],confidence}))
-      .sort((a,b)=>b.confidence-a.confidence);
-    const best=ranking[0],second=ranking[1],margin=best.confidence-second.confidence;
-    const diagnostics=ranking.map(item=>({angle:item.angle,confidence:Number(item.confidence.toFixed(3))}));
-    // Conservative guard: the model's published benchmark is not a guarantee
-    // for every wallpaper style. Uncertain predictions are never applied.
-    if(!best||best.confidence<0.70||margin<0.20){
-      return {status:'review',method:'rotation-model',message:'The AI confidence is not strong enough to rotate safely. The image was left unchanged for manual review.',candidates:diagnostics,confidence:Number((best?.confidence||0).toFixed(3)),margin:Number(margin.toFixed(3))};
-    }
-    if(best.angle===0){
-      return {status:'upright',method:'rotation-model',angle:0,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI predicts this image is already upright.',candidates:diagnostics};
-    }
-    return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI automatically applied '+(best.angle===270?'90° counterclockwise':best.angle+'° clockwise')+' rotation. Check the preview before publishing.',candidates:diagnostics};
   }
 
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
+    if(orientationRunningIndex!==null)return;
     orientationRunningIndex=index;
     const button=$('auto-orient-current');
-    if(index===currentEditorIndex){
-      button.disabled=true;
-      button.setAttribute('aria-busy','true');
-      button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
-      $('analysis-status').textContent='AI analysing image…';
-      renderEditor();
-    }
+    button.disabled=true;
+    button.setAttribute('aria-busy','true');
+    button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
+    if(index===currentEditorIndex)renderEditor();
     try{
       const result=await runWholeImageOrientation(bitmap);
       state.analysis.orientationCheck=result;
@@ -513,12 +515,10 @@
       log('On-device rotation model unavailable: '+error.message,'error');
     }finally{
       if(orientationRunningIndex===index)orientationRunningIndex=null;
-      if(index===currentEditorIndex){
-        button.disabled=false;
-        button.removeAttribute('aria-busy');
-        button.textContent='↻ Re-run AI orientation check';
-        renderEditor();
-      }
+      button.disabled=false;
+      button.removeAttribute('aria-busy');
+      button.textContent='↻ Re-run AI orientation check';
+      if(index===currentEditorIndex||currentEditorIndex<imageStates.length)renderEditor();
     }
   }
 
