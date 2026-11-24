@@ -70,7 +70,7 @@
             <div class="min-w-0 space-y-2"><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option value="">No images imported</option></select><button type="button" id="delete-queued-image" class="shrink-0 rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-200 hover:bg-rose-900/50 disabled:opacity-40 disabled:cursor-not-allowed" disabled>Delete image</button><span id="editor-image-count" class="text-[10px] text-slate-500 whitespace-nowrap">0 images</span></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
-            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses a dedicated 4-way rotation classifier on this device (0°, 90°, 180°, 270°). The model downloads once and is cached by your browser when storage allows.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
+            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses on-device AI for rotation and OCR-based mirror checks when readable text is present. Mirror corrections require strong text evidence; images without reliable text remain for manual review.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
               <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -533,6 +533,56 @@
     return await createImageBitmap(canvas);
   }
 
+  function makeMirrorCandidateCanvas(bitmap,angle,flipX){
+    const swapped=Math.abs(angle)%180===90;
+    const canvas=document.createElement('canvas');
+    canvas.width=swapped?bitmap.height:bitmap.width;
+    canvas.height=swapped?bitmap.width:bitmap.height;
+    const ctx=canvas.getContext('2d');
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(angle*Math.PI/180);
+    ctx.scale(flipX?-1:1,1);
+    ctx.drawImage(bitmap,-bitmap.width/2,-bitmap.height/2);
+    return canvas;
+  }
+
+  function editorTransformMatrix(rotation,flipX,flipY){
+    const radians=rotation*Math.PI/180,cos=Math.round(Math.cos(radians)),sin=Math.round(Math.sin(radians));
+    const sx=flipX?-1:1,sy=flipY?-1:1;
+    return [cos*sx,-sin*sy,sin*sx,cos*sy];
+  }
+
+  function applyRelativeEditorTransform(state,angle,flipX){
+    const a=editorTransformMatrix(angle,flipX,false),b=editorTransformMatrix(state.rotation,state.flipX,state.flipY);
+    const target=[a[0]*b[0]+a[1]*b[2],a[0]*b[1]+a[1]*b[3],a[2]*b[0]+a[3]*b[2],a[2]*b[1]+a[3]*b[3]];
+    let best=null,bestError=Infinity;
+    for(const rotation of [0,90,180,270])for(const fx of [false,true])for(const fy of [false,true]){
+      const candidate=editorTransformMatrix(rotation,fx,fy);
+      const error=candidate.reduce((sum,value,index)=>sum+Math.abs(value-target[index]),0);
+      if(error<bestError){bestError=error;best={rotation,flipX:fx,flipY:fy};}
+    }
+    if(!best||bestError>0.01)throw new Error('Could not combine mirror correction with existing adjustments.');
+    Object.assign(state,best);
+  }
+
+  async function detectMirrorCorrection(bitmap){
+    let worker;
+    try{worker=await getOcrWorker();}
+    catch(error){log('On-device mirror check unavailable; continuing with rotation analysis. '+(error?.message||error),'warn');return null;}
+    const candidates=[];
+    for(const flipX of [false,true])for(const angle of [0,90,180,270]){
+      $('analysis-status').textContent='Checking mirror direction… '+(candidates.length+1)+'/8';
+      const sample=makeMirrorCandidateCanvas(bitmap,angle,flipX);
+      const result=await worker.recognize(sample);
+      candidates.push({angle,flipX,...scoreOcrResult(result.data||{})});
+    }
+    candidates.sort((a,b)=>b.score-a.score);
+    const best=candidates[0],second=candidates[1];
+    const enoughText=best&&best.chars>=8&&best.words>=2;
+    const clearLead=best&&best.confidence>=55&&second&&best.score-second.score>=12;
+    if(!enoughText||!clearLead||!best.flipX)return null;
+    return {angle:best.angle,flipX:true,confidence:Number(best.confidence.toFixed(1)),margin:Number((best.score-second.score).toFixed(1)),recognizedText:best.text};
+  }
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];
     if(!state||!bitmap||!state.analysis||orientationRunningIndices.has(index))return;
@@ -546,9 +596,17 @@
     }
     try{
       analysisBitmap=await makeCurrentViewBitmap(bitmap,state);
-      const result=await runWholeImageOrientation(analysisBitmap);
-      state.analysis.orientationCheck=result;
-      if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
+      let mirrorResult=null;
+      try{mirrorResult=await detectMirrorCorrection(analysisBitmap);}
+      catch(error){log('Mirror analysis could not complete; continuing with rotation analysis. '+(error?.message||error),'warn');}
+      if(mirrorResult){
+        applyRelativeEditorTransform(state,mirrorResult.angle,mirrorResult.flipX);
+        state.analysis.orientationCheck={status:'corrected',method:'ocr-mirror',angle:mirrorResult.angle,flipX:true,confidence:mirrorResult.confidence,margin:mirrorResult.margin,recognizedText:mirrorResult.recognizedText,message:'On-device text analysis detected a mirrored image and corrected its orientation. Please review the preview.'};
+      }else{
+        const result=await runWholeImageOrientation(analysisBitmap);
+        state.analysis.orientationCheck=result;
+        if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
+      }
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',method:'rotation-model',message:'The on-device rotation model could not load or run. The image was left unchanged for manual review.'};
       log('On-device rotation model unavailable: '+(error?.message||error),'error');
