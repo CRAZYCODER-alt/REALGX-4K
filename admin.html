@@ -69,7 +69,7 @@
             <div class="min-w-0 space-y-2"><div class="flex items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option>No images selected</option></select></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
-            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses a dedicated 4-way rotation classifier on this device (0°, 90°, 180°, 270°). The model downloads once and is cached by your browser when storage allows.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The model examines the complete image. Low-confidence results are left unchanged for manual review; always inspect the preview before publishing.</p></div>
+            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses a dedicated 4-way rotation classifier on this device (0°, 90°, 180°, 270°). The model downloads once and is cached by your browser when storage allows.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
               <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -234,7 +234,7 @@
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
     if(orientationCheck?.method)lines.push('Analysis method: '+(orientationCheck.method==='rotation-model'?'Dedicated on-device rotation classifier':orientationCheck.method==='vision'?'Legacy whole-image vision model':orientationCheck.method==='ocr'?'On-device text recognition':'Face landmark detection'));
     if(orientationCheck)lines.push('AI orientation: '+orientationCheck.message);
-    if(orientationCheck?.candidates?.length)lines.push('Orientation scores: '+orientationCheck.candidates.map(c=>c.angle+'° '+Math.round((c.uprightScore||0)*100)+'%').join(' · '));
+    if(orientationCheck?.candidates?.length)lines.push('Orientation scores: '+orientationCheck.candidates.map(c=>c.angle+'° '+Math.round((c.confidence||0)*100)+'%').join(' · '));
     if(a.subjectFocus)lines.push('Detected subject focus: '+Math.round(a.subjectFocus.x*100)+'% horizontal, '+Math.round(a.subjectFocus.y*100)+'% vertical');
     lines.forEach((line,j)=>{
       const p=document.createElement('p');p.textContent=line;
@@ -388,6 +388,8 @@
 
   let orientationSessionPromise=null;
   let orientationRuntime=null;
+  // ONNX Runtime Web sessions must not receive overlapping run() calls.
+  let orientationInferenceQueue=Promise.resolve();
   const ORIENTATION_MODEL_URL='https://huggingface.co/DuarteBarbosa/deep-image-orientation-detection/resolve/main/orientation_model_v2_0.9882.onnx';
   const ORIENTATION_MODEL_CACHE='realgx-orientation-model-v1';
 
@@ -469,7 +471,9 @@
     if(!inputName||!outputName)throw new Error('The orientation model has no readable input or output.');
     const tensorData=makeOrientationTensor(bitmap);
     const input=new orientationRuntime.Tensor('float32',tensorData,[1,3,384,384]);
-    const output=await session.run({[inputName]:input});
+    const inferenceTask=orientationInferenceQueue.then(()=>session.run({[inputName]:input}));
+    orientationInferenceQueue=inferenceTask.then(()=>undefined,()=>undefined);
+    const output=await inferenceTask;
     const logits=Array.from(output[outputName]?.data||[]);
     if(logits.length!==4||logits.some(value=>!Number.isFinite(Number(value)))){
       throw new Error('The orientation model returned an unexpected result.');
@@ -484,13 +488,13 @@
     const diagnostics=ranking.map(item=>({angle:item.angle,confidence:Number(item.confidence.toFixed(3))}));
     // Conservative guard: the model's published benchmark is not a guarantee
     // for every wallpaper style. Uncertain predictions are never applied.
-    if(!best||best.confidence<0.90||margin<0.30){
-      return {status:'review',method:'rotation-model',message:'The rotation model could not identify one direction confidently. The image was left unchanged for manual review.',candidates:diagnostics,confidence:Number((best?.confidence||0).toFixed(3)),margin:Number(margin.toFixed(3))};
+    if(!best||best.confidence<0.70||margin<0.20){
+      return {status:'review',method:'rotation-model',message:'The AI confidence is not strong enough to rotate safely. The image was left unchanged for manual review.',candidates:diagnostics,confidence:Number((best?.confidence||0).toFixed(3)),margin:Number(margin.toFixed(3))};
     }
     if(best.angle===0){
-      return {status:'upright',method:'rotation-model',angle:0,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The rotation model strongly favours the current orientation.',candidates:diagnostics};
+      return {status:'upright',method:'rotation-model',angle:0,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI predicts this image is already upright.',candidates:diagnostics};
     }
-    return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The rotation model recommends '+(best.angle===270?'90° counterclockwise':best.angle+'° clockwise')+' correction. Check the preview before publishing.',candidates:diagnostics};
+    return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The AI automatically applied '+(best.angle===270?'90° counterclockwise':best.angle+'° clockwise')+' rotation. Check the preview before publishing.',candidates:diagnostics};
   }
 
   async function runAutoOrientation(index){
