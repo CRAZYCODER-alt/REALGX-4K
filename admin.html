@@ -105,6 +105,7 @@
   let imageStates = [];
   let imageBitmaps = [];
   let currentEditorIndex = 0;
+  let orientationRunningIndex = null;
   let editorRenderToken = 0;
   let faceDetectorPromise = null;
   let ocrWorkerPromise = null;
@@ -228,7 +229,7 @@
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
     ctx.drawImage(bitmap,-w*fit/2,-h*fit/2,w*fit,h*fit);ctx.restore();
     const a=state.analysis,orientationCheck=a.orientationCheck;
-    $('analysis-status').textContent=orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Analysis complete';
+    $('analysis-status').textContent=orientationRunningIndex===currentEditorIndex?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Analysis complete';
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
@@ -407,9 +408,7 @@
             const cache=await caches.open(ORIENTATION_MODEL_CACHE);
             modelResponse=await cache.match(ORIENTATION_MODEL_URL);
             if(modelResponse){
-              $('analysis-status').textContent='Loading cached on-device rotation model…';
             }else{
-              $('analysis-status').textContent='Downloading rotation model (about 81 MB)…';
               const networkResponse=await fetch(ORIENTATION_MODEL_URL,{mode:'cors'});
               if(!networkResponse.ok)throw new Error('Model download failed (HTTP '+networkResponse.status+').');
               modelResponse=networkResponse.clone();
@@ -417,7 +416,6 @@
               catch(cacheError){log('Browser storage could not cache the model; it may need to download again next time. '+cacheError.message,'warn');}
             }
           }else{
-            $('analysis-status').textContent='Downloading rotation model (about 81 MB)…';
             modelResponse=await fetch(ORIENTATION_MODEL_URL,{mode:'cors'});
             if(!modelResponse.ok)throw new Error('Model download failed (HTTP '+modelResponse.status+').');
           }
@@ -426,7 +424,6 @@
         }
 
         const modelBytes=new Uint8Array(await modelResponse.arrayBuffer());
-        $('analysis-status').textContent='Preparing on-device rotation model…';
         try{
           return await ort.InferenceSession.create(modelBytes,{
             executionProviders:['wasm'],
@@ -465,7 +462,6 @@
 
   async function runWholeImageOrientation(bitmap){
     const session=await loadOrientationModel();
-    $('analysis-status').textContent='Analyzing the complete image…';
     const inputName=session.inputNames[0];
     const outputName=session.outputNames[0];
     if(!inputName||!outputName)throw new Error('The orientation model has no readable input or output.');
@@ -499,16 +495,30 @@
 
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
-    $('analysis-status').textContent='Preparing dedicated rotation analysis…';
+    orientationRunningIndex=index;
+    const button=$('auto-orient-current');
+    if(index===currentEditorIndex){
+      button.disabled=true;
+      button.setAttribute('aria-busy','true');
+      button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
+      $('analysis-status').textContent='AI analysing image…';
+      renderEditor();
+    }
     try{
       const result=await runWholeImageOrientation(bitmap);
       state.analysis.orientationCheck=result;
       if(result.status==='corrected')state.rotation=result.angle;
-      if(index===currentEditorIndex)renderEditor();
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',method:'rotation-model',message:'The on-device rotation model could not load or run. The image was left unchanged for manual review.'};
       log('On-device rotation model unavailable: '+error.message,'error');
-      if(index===currentEditorIndex)renderEditor();
+    }finally{
+      if(orientationRunningIndex===index)orientationRunningIndex=null;
+      if(index===currentEditorIndex){
+        button.disabled=false;
+        button.removeAttribute('aria-busy');
+        button.textContent='↻ Re-run AI orientation check';
+        renderEditor();
+      }
     }
   }
 
@@ -517,7 +527,7 @@
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
   $('editor-file-select').addEventListener('change',e=>prepareEditorImage(Number(e.target.value)));
-  $('auto-orient-current').addEventListener('click',async()=>{const i=currentEditorIndex;if(!imageBitmaps[i])return;imageStates[i].analysis.orientationCheck=null;await runAutoOrientation(i);});
+  $('auto-orient-current').addEventListener('click',async()=>{const i=currentEditorIndex;if(!imageBitmaps[i]||orientationRunningIndex!==null)return;imageStates[i].analysis.orientationCheck=null;renderEditor();await runAutoOrientation(i);});
   $('rotate-left').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+270)%360));
   $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
   $('flip-x').addEventListener('click',()=>updateEditor(s=>s.flipX=!s.flipX));
