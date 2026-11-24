@@ -490,7 +490,7 @@
     if(best.angle===0){
       return {status:'upright',method:'rotation-model',angle:0,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The rotation model strongly favours the current orientation.',candidates:diagnostics};
     }
-    return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The rotation model recommends '+best.angle+'° clockwise correction. Check the preview before publishing.',candidates:diagnostics};
+    return {status:'corrected',method:'rotation-model',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),margin:Number(margin.toFixed(3)),message:'The rotation model recommends '+(best.angle===270?'90° counterclockwise':best.angle+'° clockwise')+' correction. Check the preview before publishing.',candidates:diagnostics};
   }
 
   async function runAutoOrientation(index){
