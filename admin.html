@@ -241,24 +241,12 @@
   async function getFaceDetector(){
     if(!faceDetectorPromise){
       faceDetectorPromise=(async()=>{
-        let vision;
-        let lastImportError;
-        const visionBundles=[
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs',
-          'https://unpkg.com/@mediapipe/tasks-vision@0.10.22/vision_bundle.mjs'
-        ];
-        for(const bundleUrl of visionBundles){
-          try{vision=await import(bundleUrl);break;}
-          catch(error){lastImportError=error;console.warn('MediaPipe bundle failed:',bundleUrl,error);}
-        }
-        if(!vision)throw new Error('Could not load MediaPipe from the available CDNs. '+(lastImportError?.message||''));
-        let fileset;
-        try{
-          fileset=await vision.FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm');
-        }catch(primaryWasmError){
-          console.warn('Primary MediaPipe WASM CDN failed; trying fallback.',primaryWasmError);
-          fileset=await vision.FilesetResolver.forVisionTasks('https://unpkg.com/@mediapipe/tasks-vision@0.10.22/wasm');
-        }
+        // Use Google's documented CDN path. The older pinned 0.10.22 path
+        // returned 404 in production, and the unpkg fallback was blocked by CORS.
+        const vision=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.mjs');
+        const fileset=await vision.FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm'
+        );
         return vision.FaceDetector.createFromOptions(fileset,{
           baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite'},
           runningMode:'IMAGE',minDetectionConfidence:0.45,minSuppressionThreshold:0.3
