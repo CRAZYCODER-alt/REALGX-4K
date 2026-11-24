@@ -77,21 +77,7 @@
                 <label class="block text-xs text-slate-300">Vertical position<input id="editor-y" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
                 <button type="button" id="editor-reset" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-xs font-bold hover:bg-slate-800">Reset adjustments</button></div></div>
           </div><p class="text-[11px] text-slate-500">The original is retained in wallpaper metadata. The adjusted version is shown to visitors. Review the preview before publishing.</p>
-          <section id="ai-upscaler" class="rounded-xl border border-violet-500/30 bg-violet-950/10 p-4 space-y-3">
-            <div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="text-sm font-black text-violet-200">REALGX AI Upscaler</h3><p class="text-[11px] text-slate-400 mt-1">Enhance the currently selected wallpaper on this device. The original remains untouched.</p></div><span class="text-[9px] text-violet-200 border border-violet-400/30 rounded-full px-2 py-1">On-device · Real-ESRGAN</span></div>
-            <div class="grid sm:grid-cols-2 gap-2">
-              <label class="text-xs text-slate-300">Image style<select id="upscale-model" class="field mt-1 w-full rounded-lg p-2"><option value="general">Photo / general wallpaper</option><option value="anime">Anime / illustration</option></select></label>
-              <label class="text-xs text-slate-300">Output size<select id="upscale-scale" class="field mt-1 w-full rounded-lg p-2"><option value="2">2× · Recommended</option></select></label>
-            </div>
-            <div class="flex flex-wrap gap-2"><button type="button" id="upscale-run" class="rounded-lg bg-violet-500 px-4 py-2.5 text-xs font-black text-white hover:bg-violet-400 disabled:opacity-40" disabled>✦ Upscale selected image</button><button type="button" id="upscale-cancel" class="rounded-lg border border-rose-400/40 px-4 py-2.5 text-xs font-bold text-rose-200 disabled:opacity-40" disabled>Cancel</button><button type="button" id="upscale-download" class="rounded-lg border border-violet-400/40 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40" disabled>Download enhanced image</button></div>
-            <p id="upscale-status" class="text-[11px] text-slate-300" aria-live="polite">Import an image to enable upscaling. The AI model downloads only when you first run it and is cached by your browser when supported.</p>
-            <p id="upscale-dimensions" class="text-[10px] text-slate-500"></p>
-            <div class="grid sm:grid-cols-2 gap-3">
-              <div class="rounded-lg border border-slate-800 bg-slate-950 p-2"><p class="text-[10px] font-bold text-slate-400 mb-2">BEFORE</p><img id="upscale-source-preview" class="w-full h-40 object-contain rounded" alt="Original adjusted image preview"></div>
-              <div class="rounded-lg border border-violet-500/30 bg-slate-950 p-2"><p class="text-[10px] font-bold text-violet-300 mb-2">AFTER · AI UPSCALED</p><img id="upscale-result-preview" class="w-full h-40 object-contain rounded" alt="AI upscaled image preview"></div>
-            </div>
-            <p class="text-[10px] leading-relaxed text-slate-500">Processing stays in your browser. The general model uses native 2× inference; anime uses its dedicated 4× model and scales the result to 2×. Larger tiles reduce the number of inference steps. Publishing still uses the existing 3 MB upload limit. Models: <a class="text-violet-300 underline" href="https://huggingface.co/SceneWorks/real-esrgan-onnx" target="_blank" rel="noopener">2× general</a> · <a class="text-violet-300 underline" href="https://huggingface.co/thisismert/real-esrgan-onnx" target="_blank" rel="noopener">4× anime</a> · BSD-3-Clause.</p>
-          </section>
+
         </section>
         <label class="mt-4 flex items-start gap-2 text-xs text-slate-300"><input id="review-approved" type="checkbox" class="mt-0.5 accent-cyan-400"> I reviewed the selected image previews and approve publishing the corrected versions.</label>
         <div class="mt-3 flex flex-col sm:flex-row gap-3 items-center">
@@ -204,7 +190,6 @@
     $('editor-empty').classList.remove('hidden');$('analysis-status').textContent='Waiting for image';
     $('editor-dimensions').textContent='Image details will appear here.';
     $('analysis-details').textContent='Choose an image to inspect resolution, aspect ratio and orientation metadata.';
-    if($('upscale-run')){$('upscale-run').disabled=true;$('upscale-download').disabled=true;$('upscale-source-preview').removeAttribute('src');$('upscale-result-preview').removeAttribute('src');$('upscale-dimensions').textContent='';$('upscale-status').textContent='Import an image to enable upscaling.';}
     hideOrientationCandidates();
   }
   async function readExifOrientation(file){
@@ -283,7 +268,6 @@
       $('analysis-details').append(p);
     });
     $('editor-zoom').value=Math.round(state.zoom*100);$('zoom-value').textContent=Math.round(state.zoom*100)+'%';$('editor-x').value=state.x;$('editor-y').value=state.y;
-    refreshUpscalerPanel(currentEditorIndex);
   }
   async function getFaceDetector(){
     if(!faceDetectorPromise){
@@ -603,7 +587,7 @@
   }
 
   function currentState(){return imageStates[currentEditorIndex];}
-  function updateEditor(change){const s=currentState();if(!s)return;clearUpscaleResult(s);$('review-approved').checked=false;$('upload-btn').disabled=true;change(s);renderEditor();}
+  function updateEditor(change){const s=currentState();if(!s)return;$('review-approved').checked=false;$('upload-btn').disabled=true;change(s);renderEditor();}
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
   $('editor-file-select').addEventListener('change',e=>{
@@ -619,7 +603,6 @@
     const removedIndex=currentEditorIndex;
     const removedName=selectedFiles[removedIndex]?.name||'Image';
     editorRenderToken++;
-    clearUpscaleResult(imageStates[removedIndex]);
     imageBitmaps[removedIndex]?.close?.();
     selectedFiles.splice(removedIndex,1);
     imageStates.splice(removedIndex,1);
@@ -669,7 +652,7 @@
   $('editor-zoom').addEventListener('input',e=>updateEditor(s=>s.zoom=Number(e.target.value)/100));
   $('editor-x').addEventListener('input',e=>updateEditor(s=>s.x=Number(e.target.value)));
   $('editor-y').addEventListener('input',e=>updateEditor(s=>s.y=Number(e.target.value)));
-  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;clearUpscaleResult(s);$('review-approved').checked=false;$('upload-btn').disabled=true;const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
+  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;$('review-approved').checked=false;$('upload-btn').disabled=true;const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
   function editorChanged(s){return !!(s.rotation||s.flipX||s.flipY||s.zoom!==1||s.x||s.y||s.exifOrientation!==1);}
   async function canvasBlob(canvas,type){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render adjusted image.')),type,/image\/jpeg|image\/webp/.test(type)?0.94:undefined));}
   async function getAdjustedFile(file,index){
@@ -690,208 +673,6 @@
     return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-adjusted.'+ext,{type});
   }
 
-
-  // REALGX AI Upscaler — browser-side Real-ESRGAN ONNX inference.
-  let upscalerRuntimePromise=null;
-  let upscalerSession=null;
-  let upscalerSessionKind='';
-  let upscalerBusy=false;
-  let upscalerCancelRequested=false;
-  const UPSCALER_MODEL_URLS={
-    general:'https://huggingface.co/SceneWorks/real-esrgan-onnx/resolve/main/real_esrgan_x2.onnx',
-    anime:'https://huggingface.co/thisismert/real-esrgan-onnx/resolve/main/onnx/RealESRGAN_x4plus_anime_6B.onnx'
-  };
-  function clearUpscaleResult(state){
-    if(!state)return;
-    if(state.upscaleSourceUrl)URL.revokeObjectURL(state.upscaleSourceUrl);
-    if(state.upscaleResultUrl)URL.revokeObjectURL(state.upscaleResultUrl);
-    if(state.upscaleBasePreviewUrl)URL.revokeObjectURL(state.upscaleBasePreviewUrl);
-    state.upscaledBlob=null;state.upscaleSourceUrl=null;state.upscaleResultUrl=null;state.upscaleBasePreviewUrl=null;
-    state.upscaleWidth=0;state.upscaleHeight=0;state.upscaleScale=0;state.upscaleModel='';
-    if(typeof $==='function'&&$('upscale-result-preview')){
-      $('upscale-source-preview').removeAttribute('src');
-      $('upscale-result-preview').removeAttribute('src');
-      $('upscale-download').disabled=true;
-      $('upscale-dimensions').textContent='';
-      $('upscale-status').textContent='Image adjustments changed. Run the upscaler again to create a matching result.';
-    }
-  }
-  function refreshUpscalerPanel(index){
-    const state=imageStates[index],file=selectedFiles[index];
-    $('upscale-run').disabled=!file||upscalerBusy;
-    $('upscale-download').disabled=!state?.upscaledBlob;
-    if(state?.upscaledBlob){
-      if(state.upscaleSourceUrl)$('upscale-source-preview').src=state.upscaleSourceUrl;
-      if(state.upscaleResultUrl)$('upscale-result-preview').src=state.upscaleResultUrl;
-      $('upscale-dimensions').textContent='Output: '+state.upscaleWidth+' × '+state.upscaleHeight+'px · '+state.upscaleScale+'× · '+state.upscaleModel;
-      $('upscale-status').textContent='Upscaling complete. The enhanced version will be used when you approve publishing.';
-    }else{
-      $('upscale-result-preview').removeAttribute('src');
-      $('upscale-dimensions').textContent='';
-      if(file){
-        if(!state.upscaleBasePreviewUrl)state.upscaleBasePreviewUrl=URL.createObjectURL(file);
-        $('upscale-source-preview').src=state.upscaleBasePreviewUrl;
-        $('upscale-status').textContent='Ready. Choose a model style and output size, then run the upscaler.';
-      }else{
-        $('upscale-source-preview').removeAttribute('src');
-        $('upscale-status').textContent='Import an image to enable upscaling.';
-      }
-    }
-  }
-  async function loadUpscalerRuntime(){
-    if(!upscalerRuntimePromise){
-      upscalerRuntimePromise=(async()=>{
-        try{return await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.webgpu.min.mjs');}
-        catch(error){return await import('https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.min.mjs');}
-      })();
-    }
-    try{return await upscalerRuntimePromise;}catch(error){upscalerRuntimePromise=null;throw error;}
-  }
-  async function fetchUpscalerModel(url){
-    const cacheName='realgx-ai-upscaler-models-v1';
-    let cache=null;
-    try{if('caches'in window)cache=await caches.open(cacheName);}catch(error){}
-    let response=cache?await cache.match(url):null;
-    if(!response){
-      $('upscale-status').textContent='Downloading AI model (first use only)…';
-      response=await fetch(url);
-      if(!response.ok)throw new Error('Could not download the AI model (HTTP '+response.status+').');
-      if(cache){try{await cache.put(url,response.clone());}catch(error){}}
-    }else $('upscale-status').textContent='Loading the cached AI model…';
-    return new Uint8Array(await response.arrayBuffer());
-  }
-  async function getUpscalerSession(kind){
-    if(upscalerSession&&upscalerSessionKind===kind)return {session:upscalerSession,ort:await loadUpscalerRuntime()};
-    if(upscalerSession){try{await upscalerSession.release();}catch(error){}upscalerSession=null;upscalerSessionKind='';}
-    const ort=await loadUpscalerRuntime();
-    if(ort.env?.wasm)ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
-    const modelBytes=await fetchUpscalerModel(UPSCALER_MODEL_URLS[kind]||UPSCALER_MODEL_URLS.general);
-    $('upscale-status').textContent='Preparing AI model on this device…';
-    let session,backend='WebGPU';
-    if('gpu'in navigator){
-      try{session=await ort.InferenceSession.create(modelBytes,{executionProviders:['webgpu','wasm'],graphOptimizationLevel:'all'});}
-      catch(error){backend='CPU / WASM';session=await ort.InferenceSession.create(modelBytes,{executionProviders:['wasm'],graphOptimizationLevel:'all'});}
-    }else{
-      backend='CPU / WASM';
-      session=await ort.InferenceSession.create(modelBytes,{executionProviders:['wasm'],graphOptimizationLevel:'all'});
-    }
-    upscalerSession=session;upscalerSessionKind=kind;
-    return {session,ort,backend};
-  }
-  async function upscaleTile(session,ort,sourceCanvas,sourceX,sourceY,tileW,tileH){
-    const paddedW=Math.ceil(tileW/4)*4,paddedH=Math.ceil(tileH/4)*4;
-    const inputCanvas=document.createElement('canvas');inputCanvas.width=paddedW;inputCanvas.height=paddedH;
-    const inputCtx=inputCanvas.getContext('2d',{willReadFrequently:true});
-    inputCtx.drawImage(sourceCanvas,sourceX,sourceY,tileW,tileH,0,0,tileW,tileH);
-    const pixels=inputCtx.getImageData(0,0,paddedW,paddedH).data;
-    const plane=paddedW*paddedH,input=new Float32Array(plane*3);
-    for(let i=0;i<plane;i++){input[i]=pixels[i*4]/255;input[plane+i]=pixels[i*4+1]/255;input[plane*2+i]=pixels[i*4+2]/255;}
-    const tensor=new ort.Tensor('float32',input,[1,3,paddedH,paddedW]);
-    try{
-      const feeds={};feeds[session.inputNames[0]]=tensor;
-      const outputs=await session.run(feeds),output=outputs[session.outputNames[0]];
-      const outW=output.dims[3],outH=output.dims[2],outPlane=outW*outH;
-      const modelScale=Math.round(outW/paddedW);
-      if(![2,4].includes(modelScale)||outH!==paddedH*modelScale)throw new Error('Unexpected AI model output dimensions.');
-      const data=output.data;
-      const rgba=new ImageData(outW,outH);
-      for(let i=0;i<outPlane;i++){
-        rgba.data[i*4]=Math.max(0,Math.min(255,Math.round(data[i]*255)));
-        rgba.data[i*4+1]=Math.max(0,Math.min(255,Math.round(data[outPlane+i]*255)));
-        rgba.data[i*4+2]=Math.max(0,Math.min(255,Math.round(data[outPlane*2+i]*255)));
-        rgba.data[i*4+3]=255;
-      }
-      const resultCanvas=document.createElement('canvas');resultCanvas.width=outW;resultCanvas.height=outH;
-      resultCanvas.getContext('2d').putImageData(rgba,0,0);
-      resultCanvas.dataset.modelScale=String(modelScale);
-      return resultCanvas;
-    }finally{tensor.dispose?.();}
-  }
-  async function runRealEsrgan(sourceCanvas,kind,scale){
-    const width=sourceCanvas.width,height=sourceCanvas.height,outW=width*scale,outH=height*scale;
-    const maxPixels=36000000;
-    if(outW*outH>maxPixels)throw new Error('This image is too large for '+scale+'× output in a browser. Choose 2× or use a smaller source image.');
-    const {session,ort,backend}=await getUpscalerSession(kind);
-    const outputCanvas=document.createElement('canvas');outputCanvas.width=outW;outputCanvas.height=outH;
-    const outputCtx=outputCanvas.getContext('2d');
-    const tileSize=256,overlap=16,step=tileSize-overlap*2;
-    let completed=0,total=0;
-    for(let y=0;y<height;){for(let x=0;x<width;){total++;if(x+tileSize>=width)break;x+=step;}if(y+tileSize>=height)break;y+=step;}
-    let done=0;
-    for(let y=0;y<height;){
-      for(let x=0;x<width;){
-        const tileW=Math.min(tileSize,width-x),tileH=Math.min(tileSize,height-y);
-        if(upscalerCancelRequested)throw new DOMException('Upscaling cancelled.','AbortError');
-        done++;
-        $('upscale-status').textContent='AI enhancing image… '+Math.round(done/total*100)+'% · '+done+' / '+total+' tiles · '+backend;
-        const tileCanvas=await upscaleTile(session,ort,sourceCanvas,x,y,tileW,tileH);
-        if(upscalerCancelRequested){tileCanvas.width=0;tileCanvas.height=0;throw new DOMException('Upscaling cancelled.','AbortError');}
-        const modelScale=Number(tileCanvas.dataset.modelScale)||4;
-        const cropL=x>0?overlap:0,cropT=y>0?overlap:0;
-        const cropR=x+tileW<width?overlap:0,cropB=y+tileH<height?overlap:0;
-        const keepW=tileW-cropL-cropR,keepH=tileH-cropT-cropB;
-        outputCtx.drawImage(tileCanvas,cropL*modelScale,cropT*modelScale,keepW*modelScale,keepH*modelScale,(x+cropL)*scale,(y+cropT)*scale,keepW*scale,keepH*scale);
-        tileCanvas.width=0;tileCanvas.height=0;
-        await new Promise(resolve=>setTimeout(resolve,0));
-        if(x+tileSize>=width)break;
-        x+=step;
-      }
-      if(y+tileSize>=height)break;
-      y+=step;
-    }
-    return {canvas:outputCanvas,backend,width:outW,height:outH};
-  }
-  async function canvasJpegUnderLimit(canvas){
-    for(const quality of [0.9,0.84,0.78]){
-      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));
-      if(blob&&blob.size<=3*1024*1024)return blob;
-    }
-    throw new Error('The enhanced image is still over the 3 MB upload limit after compression. Try a smaller source image or 2× output.');
-  }
-  $('upscale-run').addEventListener('click',async()=>{
-    const index=currentEditorIndex,state=imageStates[index],file=selectedFiles[index];
-    if(!file||!state||upscalerBusy)return;
-    upscalerBusy=true;upscalerCancelRequested=false;$('upscale-run').disabled=true;$('upscale-cancel').disabled=false;$('upscale-download').disabled=true;
-    $('review-approved').checked=false;$('upload-btn').disabled=true;
-    clearUpscaleResult(state);
-    let sourceBitmap=null,adjustedFile=null,resultCanvas=null;
-    try{
-      $('upscale-status').textContent='Preparing the current edited image…';
-      adjustedFile=await getAdjustedFile(file,index);
-      sourceBitmap=await createImageBitmap(adjustedFile);
-      const sourceCanvas=document.createElement('canvas');sourceCanvas.width=sourceBitmap.width;sourceCanvas.height=sourceBitmap.height;
-      sourceCanvas.getContext('2d').drawImage(sourceBitmap,0,0);
-      const kind=$('upscale-model').value,scale=Number($('upscale-scale').value);
-      const result=await runRealEsrgan(sourceCanvas,kind,scale);
-      resultCanvas=result.canvas;
-      const blob=await canvasJpegUnderLimit(resultCanvas);
-      state.upscaledBlob=blob;state.upscaleScale=scale;state.upscaleWidth=result.width;state.upscaleHeight=result.height;state.upscaleModel=kind==='anime'?'Anime Real-ESRGAN':'General Real-ESRGAN';
-      state.upscaleSourceUrl=URL.createObjectURL(adjustedFile);
-      state.upscaleResultUrl=URL.createObjectURL(blob);
-      $('upscale-source-preview').src=state.upscaleSourceUrl;
-      $('upscale-result-preview').src=state.upscaleResultUrl;
-      $('upscale-dimensions').textContent='Output: '+result.width+' × '+result.height+'px · '+scale+'× · '+state.upscaleModel+' · '+(blob.size/1024/1024).toFixed(2)+' MB';
-      $('upscale-status').textContent='Upscaling complete using '+result.backend+'. The enhanced image is ready for review and can be included when publishing.';
-      $('upscale-download').disabled=false;
-    }catch(error){
-      $('upscale-status').textContent=error?.name==='AbortError'?'Upscaling cancelled. Your original image is unchanged.':'Upscaling could not complete: '+(error?.message||String(error));
-      log('AI upscaler: '+(error?.message||error),'error');
-    }finally{
-      sourceBitmap?.close?.();if(resultCanvas){resultCanvas.width=0;resultCanvas.height=0;}
-      upscalerBusy=false;upscalerCancelRequested=false;$('upscale-cancel').disabled=true;$('upscale-run').disabled=!selectedFiles[currentEditorIndex];$('upscale-download').disabled=!imageStates[currentEditorIndex]?.upscaledBlob;
-      refreshUpscalerPanel(currentEditorIndex);
-    }
-  });
-  $('upscale-cancel').addEventListener('click',()=>{
-    if(!upscalerBusy)return;
-    upscalerCancelRequested=true;
-    $('upscale-cancel').disabled=true;
-    $('upscale-status').textContent='Cancelling after the current tile finishes…';
-  });
-  $('upscale-download').addEventListener('click',()=>{
-    const state=imageStates[currentEditorIndex];if(!state?.upscaledBlob)return;
-    const link=document.createElement('a');link.href=state.upscaleResultUrl;link.download=selectedFiles[currentEditorIndex].name.replace(/\.[^.]+$/,'')+'-upscaled.jpg';link.click();
-  });
 
   $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
   $('files').addEventListener('change', e => { const files=Array.from(e.currentTarget.files||[]); e.currentTarget.value=''; if(files.length)setFiles(files,true); });
@@ -980,9 +761,7 @@
         log(`Uploading ${file.name}…`);
         const originalUrls = await uploadToImgBB(file, file.name);
         const state = imageStates[done];
-        const adjustedFile = state?.upscaledBlob
-          ? new File([state.upscaledBlob],file.name.replace(/\.[^.]+$/,'')+'-upscaled.jpg',{type:'image/jpeg'})
-          : await getAdjustedFile(file, done);
+        const adjustedFile = await getAdjustedFile(file, done);
         const urls = adjustedFile === file ? originalUrls : await uploadToImgBB(adjustedFile, adjustedFile.name);
         const typedTitle = $('title').value.trim();
         const title = (selectedFiles.length === 1 && typedTitle)
@@ -998,7 +777,6 @@
             analysis: state.analysis,
             subject_focus: state.analysis?.subjectFocus || null,
             orientation_analysis: state.analysis?.orientationCheck || null,
-            upscaling: state.upscaledBlob ? { model: state.upscaleModel, scale: state.upscaleScale, width: state.upscaleWidth, height: state.upscaleHeight } : null,
             processing_version: 3
           }
         });
@@ -1013,7 +791,6 @@
       }
     }
     selectedFiles = [];
-    imageStates.forEach(st=>clearUpscaleResult(st));
     imageStates = []; imageBitmaps.forEach(b=>b?.close?.()); imageBitmaps=[];
     $('files').value = '';
     $('title').value = '';
