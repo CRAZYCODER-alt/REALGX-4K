@@ -12,6 +12,8 @@
     .field{background:#080d1b;border:1px solid #334155;color:#fff}
     .field:focus{outline:2px solid #06b6d4;outline-offset:1px}
     .drop-active{border-color:#22d3ee!important;background:#083344!important}
+    .tool-btn{border:1px solid #334155;border-radius:.65rem;padding:.55rem .45rem;font-size:11px;font-weight:700;color:#dbeafe;background:#10182a}
+    .tool-btn:hover{border-color:#22d3ee;background:#123047}
   </style>
 </head>
 <body class="min-h-screen">
@@ -60,6 +62,21 @@
           <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
+
+        <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
+          <div class="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(240px,.8fr)] gap-4">
+            <div class="min-w-0 space-y-2"><div class="flex items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option>No images selected</option></select></div>
+              <div class="rounded-xl border border-slate-800 bg-[#050812] min-h-48 flex items-center justify-center p-2"><canvas id="editor-canvas" class="max-w-full max-h-[380px] h-auto w-auto object-contain"></canvas><p id="editor-empty" class="text-xs text-slate-500">Select an image to start the analysis</p></div>
+              <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
+            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><p class="text-xs font-bold text-cyan-300">Automatic analysis</p><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Choose an image to inspect resolution, aspect ratio and orientation metadata.</p></div><p class="text-[10px] leading-relaxed text-amber-200/80">Visual AI subject recognition is not connected yet. Images without reliable rotation metadata are flagged for human review.</p></div>
+              <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
+                <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="50" max="200" value="100" class="w-full mt-2 accent-cyan-400"></label>
+                <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
+                <label class="block text-xs text-slate-300">Vertical position<input id="editor-y" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
+                <button type="button" id="editor-reset" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-xs font-bold hover:bg-slate-800">Reset adjustments</button></div></div>
+          </div><p class="text-[11px] text-slate-500">The original is retained in wallpaper metadata. The adjusted version is shown to visitors. Review the preview before publishing.</p>
+        </section>
         <div class="mt-4 flex flex-col sm:flex-row gap-3 items-center">
           <button id="upload-btn" class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-cyan-400 to-pink-500 text-slate-950 font-black px-6 py-3">Upload selected wallpapers</button>
           <span id="progress-label" class="text-xs text-slate-400" aria-live="polite">Waiting for files</span>
@@ -84,6 +101,10 @@
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const $ = id => document.getElementById(id);
   let selectedFiles = [];
+  let imageStates = [];
+  let imageBitmaps = [];
+  let currentEditorIndex = 0;
+  let editorRenderToken = 0;
 
   function log(message, kind='info') {
     const p = document.createElement('p');
@@ -107,10 +128,103 @@
       ? selectedFiles.map(f => `${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join(' · ')
       : 'No files selected';
   }
-  function setFiles(files) {
-    selectedFiles = Array.from(files || []).filter(f => f.type.startsWith('image/'));
-    renderSelected();
-    if (selectedFiles.length !== Array.from(files || []).length) log('Non-image files were ignored.', 'error');
+  function defaultImageState(){return {rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null};}
+  async function setFiles(files) {
+    const incoming=Array.from(files || []);
+    selectedFiles=incoming.filter(f=>f.type.startsWith('image/'));
+    imageStates=selectedFiles.map(()=>defaultImageState());
+    imageBitmaps=selectedFiles.map(()=>null);
+    currentEditorIndex=0;renderSelected();
+    if(selectedFiles.length!==incoming.length)log('Non-image files were ignored.','error');
+    $('editor-file-select').innerHTML='';
+    selectedFiles.forEach((file,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent=file.name;$('editor-file-select').append(o);});
+    $('editor-file-select').disabled=!selectedFiles.length;
+    if(!selectedFiles.length){clearEditor();return;}
+    await prepareEditorImage(0);
+  }
+  function clearEditor(){
+    const canvas=$('editor-canvas');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);canvas.width=0;canvas.height=0;
+    $('editor-empty').classList.remove('hidden');$('analysis-status').textContent='Waiting for image';
+    $('editor-dimensions').textContent='Image details will appear here.';
+    $('analysis-details').textContent='Choose an image to inspect resolution, aspect ratio and orientation metadata.';
+  }
+  async function readExifOrientation(file){
+    try{
+      if(!/^image\/jpeg$/i.test(file.type))return 1;
+      const buf=await file.slice(0,262144).arrayBuffer(),v=new DataView(buf);
+      if(v.getUint16(0,false)!==0xFFD8)return 1;
+      let off=2;
+      while(off+4<v.byteLength){
+        if(v.getUint8(off)!==0xFF)break;
+        const marker=v.getUint8(off+1),len=v.getUint16(off+2,false);
+        if(marker===0xE1&&off+len<=v.byteLength){
+          const p=off+4;if(v.getUint32(p,false)!==0x45786966)return 1;
+          const t=p+6,little=v.getUint16(t,false)===0x4949,ifd=t+v.getUint32(t+4,little),n=v.getUint16(ifd,little);
+          for(let j=0;j<n;j++){const e=ifd+2+j*12;if(v.getUint16(e,little)===0x0112)return v.getUint16(e+8,little);}
+          return 1;
+        }
+        if(len<2)break;off+=2+len;
+      }
+    }catch(e){}
+    return 1;
+  }
+  function describeAnalysis(bitmap,orientation){
+    const w=bitmap.width,h=bitmap.height,ratio=w/h;
+    const kind=ratio>2.05?'Ultrawide':ratio>1.18?'Landscape / desktop':ratio<.82?'Portrait / phone':'Square / flexible';
+    const quality=w>=3840&&h>=2160?'4K class':w>=2560&&h>=1440?'High resolution':w>=1920&&h>=1080?'Full HD or better':'Below Full HD';
+    return {width:w,height:h,ratio:Number(ratio.toFixed(3)),kind,quality,orientation,review:orientation===3||orientation===6||orientation===8?'EXIF rotation metadata detected; browser preview normalizes orientation':'No reliable rotation metadata; visually check the preview'};
+  }
+  async function prepareEditorImage(index){
+    if(index<0||index>=selectedFiles.length)return;
+    currentEditorIndex=index;$('editor-file-select').value=String(index);$('editor-empty').classList.add('hidden');$('analysis-status').textContent='Analyzing image…';
+    const token=++editorRenderToken,file=selectedFiles[index];
+    try{
+      const result=await Promise.all([createImageBitmap(file),readExifOrientation(file)]);
+      const bitmap=result[0],orientation=result[1];
+      if(token!==editorRenderToken){bitmap.close?.();return;}
+      imageBitmaps[index]?.close?.();imageBitmaps[index]=bitmap;
+      imageStates[index].exifOrientation=orientation;imageStates[index].analysis=describeAnalysis(bitmap,orientation);renderEditor();
+    }catch(error){$('analysis-status').textContent='Could not preview';log(file.name+': '+error.message,'error');}
+  }
+  function renderEditor(){
+    const bitmap=imageBitmaps[currentEditorIndex],state=imageStates[currentEditorIndex];if(!bitmap||!state)return;
+    const swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,canvas=$('editor-canvas');
+    canvas.width=swapped?h:w;canvas.height=swapped?w:h;
+    const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.save();ctx.translate(canvas.width/2+state.x*canvas.width*.0035,canvas.height/2+state.y*canvas.height*.0035);
+    ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
+    ctx.drawImage(bitmap,-w/2,-h/2,w,h);ctx.restore();
+    const a=state.analysis;$('analysis-status').textContent='Analysis complete';
+    $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
+    $('analysis-details').innerHTML='';
+    ['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review].forEach((line,j)=>{
+      const p=document.createElement('p');p.textContent=line;p.className=j===5&&a.orientation!==1?'text-amber-300':'text-slate-300';$('analysis-details').append(p);
+    });
+    $('editor-zoom').value=Math.round(state.zoom*100);$('zoom-value').textContent=Math.round(state.zoom*100)+'%';$('editor-x').value=state.x;$('editor-y').value=state.y;
+  }
+  function currentState(){return imageStates[currentEditorIndex];}
+  function updateEditor(change){const s=currentState();if(!s)return;change(s);renderEditor();}
+  $('editor-file-select').addEventListener('change',e=>prepareEditorImage(Number(e.target.value)));
+  $('rotate-left').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+270)%360));
+  $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
+  $('flip-x').addEventListener('click',()=>updateEditor(s=>s.flipX=!s.flipX));
+  $('flip-y').addEventListener('click',()=>updateEditor(s=>s.flipY=!s.flipY));
+  $('editor-zoom').addEventListener('input',e=>updateEditor(s=>s.zoom=Number(e.target.value)/100));
+  $('editor-x').addEventListener('input',e=>updateEditor(s=>s.x=Number(e.target.value)));
+  $('editor-y').addEventListener('input',e=>updateEditor(s=>s.y=Number(e.target.value)));
+  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
+  function editorChanged(s){return !!(s.rotation||s.flipX||s.flipY||s.zoom!==1||s.x||s.y||s.exifOrientation!==1);}
+  async function canvasBlob(canvas,type){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render adjusted image.')),type,/image\/jpeg|image\/webp/.test(type)?0.94:undefined));}
+  async function getAdjustedFile(file,index){
+    const state=imageStates[index];if(!editorChanged(state))return file;
+    const bitmap=imageBitmaps[index]||await createImageBitmap(file),swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
+    c.width=swapped?h:w;c.height=swapped?w:h;
+    const ctx=c.getContext('2d');ctx.translate(c.width/2+state.x*c.width*.0035,c.height/2+state.y*c.height*.0035);
+    ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));ctx.drawImage(bitmap,-w/2,-h/2,w,h);
+    const type=/image\/(png|webp)$/i.test(file.type)?file.type:'image/jpeg',blob=await canvasBlob(c,type);
+    if(blob.size>3*1024*1024)throw new Error('Adjusted image exceeds the 3 MB upload limit. Reduce dimensions or export/compress it before uploading.');
+    const ext=type==='image/png'?'png':type==='image/webp'?'webp':'jpg';
+    return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-adjusted.'+ext,{type});
   }
 
   $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
@@ -164,7 +278,7 @@
     });
   }
 
-  async function uploadToImgBB(file) {
+  async function uploadToImgBB(file, uploadName=file.name) {
     // Vercel Functions enforce a 4.5 MB request-body limit. Base64 adds overhead,
     // so keep each source image at 3 MB to leave room for JSON and metadata.
     if (file.size > 3 * 1024 * 1024) throw new Error(`${file.name} exceeds the 3 MB hosted upload limit. Resize/compress it before uploading.`);
@@ -178,7 +292,7 @@
         'Authorization': `Bearer ${session.access_token}`
       },
       body: JSON.stringify({
-        fileName: file.name,
+        fileName: uploadName,
         contentType: file.type || 'application/octet-stream',
         imageBase64: await fileToBase64(file)
       })
@@ -198,14 +312,24 @@
     for (const file of selectedFiles) {
       try {
         log(`Uploading ${file.name}…`);
-        const urls = await uploadToImgBB(file);
+        const originalUrls = await uploadToImgBB(file, file.name);
+        const adjustedFile = await getAdjustedFile(file, done);
+        const urls = adjustedFile === file ? originalUrls : await uploadToImgBB(adjustedFile, adjustedFile.name);
         const typedTitle = $('title').value.trim();
         const title = (selectedFiles.length === 1 && typedTitle)
           ? typedTitle
           : file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const state = imageStates[done];
         const { error } = await supabaseClient.from('wallpapers').insert({
           title, description: $('description').value.trim(), category: $('category').value,
-          preview_url: urls.preview_url, full_url: urls.full_url
+          preview_url: urls.preview_url, full_url: urls.full_url,
+          layout_settings: {
+            original_url: originalUrls.full_url,
+            approved_by_admin: true,
+            adjustments: { rotation: state.rotation, flipX: state.flipX, flipY: state.flipY, zoom: state.zoom, x: state.x, y: state.y, exif_orientation: state.exifOrientation },
+            analysis: state.analysis,
+            processing_version: 1
+          }
         });
         if (error) throw error;
         log(`Published: ${title}`, 'success');
@@ -218,10 +342,12 @@
       }
     }
     selectedFiles = [];
+    imageStates = []; imageBitmaps.forEach(b=>b?.close?.()); imageBitmaps=[];
     $('files').value = '';
     $('title').value = '';
     $('description').value = '';
     renderSelected();
+    clearEditor();
     $('upload-btn').disabled = false;
     log(`Finished. ${done-failures} uploaded, ${failures} failed.`, failures ? 'error' : 'success');
     await loadWallpapers();
