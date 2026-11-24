@@ -67,7 +67,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
           <div class="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(240px,.8fr)] gap-4">
             <div class="min-w-0 space-y-2"><div class="flex items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option>No images selected</option></select></div>
-              <div class="rounded-xl border border-slate-800 bg-[#050812] min-h-48 flex items-center justify-center p-2"><canvas id="editor-canvas" class="max-w-full max-h-[380px] h-auto w-auto object-contain"></canvas><p id="editor-empty" class="text-xs text-slate-500">Select an image to start the analysis</p></div>
+              <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
             <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><p class="text-xs font-bold text-cyan-300">Automatic analysis</p><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Choose an image to inspect resolution, aspect ratio and orientation metadata.</p></div><p class="text-[10px] leading-relaxed text-amber-200/80">Visual AI subject recognition is not connected yet. Images without reliable rotation metadata are flagged for human review.</p></div>
               <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
@@ -190,12 +190,15 @@
   }
   function renderEditor(){
     const bitmap=imageBitmaps[currentEditorIndex],state=imageStates[currentEditorIndex];if(!bitmap||!state)return;
-    const swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,canvas=$('editor-canvas');
-    canvas.width=swapped?h:w;canvas.height=swapped?w:h;
-    const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.save();ctx.translate(canvas.width/2+state.x*canvas.width*.0035,canvas.height/2+state.y*canvas.height*.0035);
+    const canvas=$('editor-canvas'),stageW=1200,stageH=800,w=bitmap.width,h=bitmap.height;
+    canvas.width=stageW;canvas.height=stageH;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#050812';ctx.fillRect(0,0,stageW,stageH);
+    const rotated= Math.abs(state.rotation)%180===90;
+    const visualW=rotated?h:w,visualH=rotated?w:h;
+    const fit=Math.min((stageW-80)/visualW,(stageH-80)/visualH);
+    ctx.save();ctx.translate(stageW/2+state.x*stageW*.0035,stageH/2+state.y*stageH*.0035);
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
-    ctx.drawImage(bitmap,-w/2,-h/2,w,h);ctx.restore();
+    ctx.drawImage(bitmap,-w*fit/2,-h*fit/2,w*fit,h*fit);ctx.restore();
     const a=state.analysis;$('analysis-status').textContent='Analysis complete';
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
@@ -229,7 +232,8 @@
     const bitmap=imageBitmaps[index],swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
     c.width=swapped?h:w;c.height=swapped?w:h;
     const ctx=c.getContext('2d');ctx.translate(c.width/2+state.x*c.width*.0035,c.height/2+state.y*c.height*.0035);
-    ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));ctx.drawImage(bitmap,-w/2,-h/2,w,h);
+    ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
+    ctx.drawImage(bitmap,-w/2,-h/2,w,h);
     const type=/image\/(png|webp)$/i.test(file.type)?file.type:'image/jpeg',blob=await canvasBlob(c,type);
     if(blob.size>3*1024*1024)throw new Error('Adjusted image exceeds the 3 MB upload limit. Reduce dimensions or export/compress it before uploading.');
     const ext=type==='image/png'?'png':type==='image/webp'?'webp':'jpg';
