@@ -77,8 +77,9 @@
                 <button type="button" id="editor-reset" class="w-full rounded-lg border border-slate-600 px-3 py-2 text-xs font-bold hover:bg-slate-800">Reset adjustments</button></div></div>
           </div><p class="text-[11px] text-slate-500">The original is retained in wallpaper metadata. The adjusted version is shown to visitors. Review the preview before publishing.</p>
         </section>
-        <div class="mt-4 flex flex-col sm:flex-row gap-3 items-center">
-          <button id="upload-btn" class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-cyan-400 to-pink-500 text-slate-950 font-black px-6 py-3">Upload selected wallpapers</button>
+        <label class="mt-4 flex items-start gap-2 text-xs text-slate-300"><input id="review-approved" type="checkbox" class="mt-0.5 accent-cyan-400"> I reviewed the selected image previews and approve publishing the corrected versions.</label>
+        <div class="mt-3 flex flex-col sm:flex-row gap-3 items-center">
+          <button id="upload-btn" class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-cyan-400 to-pink-500 text-slate-950 font-black px-6 py-3">Approve &amp; publish selected wallpapers</button>
           <span id="progress-label" class="text-xs text-slate-400" aria-live="polite">Waiting for files</span>
         </div>
         <div class="mt-3 h-2 bg-slate-800 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-cyan-400 w-0 transition-all"></div></div>
@@ -135,6 +136,7 @@
     imageStates=selectedFiles.map(()=>defaultImageState());
     imageBitmaps=selectedFiles.map(()=>null);
     currentEditorIndex=0;renderSelected();
+    $('review-approved').checked=false;$('upload-btn').disabled=true;
     if(selectedFiles.length!==incoming.length)log('Non-image files were ignored.','error');
     $('editor-file-select').innerHTML='';
     selectedFiles.forEach((file,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent=file.name;$('editor-file-select').append(o);});
@@ -204,6 +206,8 @@
   }
   function currentState(){return imageStates[currentEditorIndex];}
   function updateEditor(change){const s=currentState();if(!s)return;change(s);renderEditor();}
+  $('upload-btn').disabled=true;
+  $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
   $('editor-file-select').addEventListener('change',e=>prepareEditorImage(Number(e.target.value)));
   $('rotate-left').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+270)%360));
   $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
@@ -216,8 +220,13 @@
   function editorChanged(s){return !!(s.rotation||s.flipX||s.flipY||s.zoom!==1||s.x||s.y||s.exifOrientation!==1);}
   async function canvasBlob(canvas,type){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render adjusted image.')),type,/image\/jpeg|image\/webp/.test(type)?0.94:undefined));}
   async function getAdjustedFile(file,index){
-    const state=imageStates[index];if(!editorChanged(state))return file;
-    const bitmap=imageBitmaps[index]||await createImageBitmap(file),swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
+    const state=imageStates[index];
+    if(!imageBitmaps[index]){
+      const result=await Promise.all([createImageBitmap(file),readExifOrientation(file)]);
+      imageBitmaps[index]=result[0];state.exifOrientation=result[1];state.analysis=describeAnalysis(result[0],result[1]);
+    }
+    if(!editorChanged(state))return file;
+    const bitmap=imageBitmaps[index],swapped=Math.abs(state.rotation)%180===90,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
     c.width=swapped?h:w;c.height=swapped?w:h;
     const ctx=c.getContext('2d');ctx.translate(c.width/2+state.x*c.width*.0035,c.height/2+state.y*c.height*.0035);
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));ctx.drawImage(bitmap,-w/2,-h/2,w,h);
@@ -348,7 +357,8 @@
     $('description').value = '';
     renderSelected();
     clearEditor();
-    $('upload-btn').disabled = false;
+    $('review-approved').checked=false;
+    $('upload-btn').disabled = true;
     log(`Finished. ${done-failures} uploaded, ${failures} failed.`, failures ? 'error' : 'success');
     await loadWallpapers();
   });
