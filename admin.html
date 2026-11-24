@@ -234,6 +234,7 @@
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
     if(orientationCheck?.method)lines.push('Analysis method: '+(orientationCheck.method==='ocr'?'On-device text recognition':'Face landmark detection'));
     if(orientationCheck)lines.push('AI orientation: '+orientationCheck.message);
+    if(orientationCheck?.candidates?.length)lines.push('Orientation scores: '+orientationCheck.candidates.map(c=>c.angle+'° '+Math.round((c.uprightScore||0)*100)+'%').join(' · '));
     if(a.subjectFocus)lines.push('Detected subject focus: '+Math.round(a.subjectFocus.x*100)+'% horizontal, '+Math.round(a.subjectFocus.y*100)+'% vertical');
     lines.forEach((line,j)=>{
       const p=document.createElement('p');p.textContent=line;
@@ -384,43 +385,110 @@
     return {score,confidence,uprightness,noseDrop,mouthDrop,focus:{x:Number(((eyeA.x+eyeB.x+nose.x+mouth.x)/4).toFixed(4)),y:Number(((eyeA.y+eyeB.y+nose.y+mouth.y)/4).toFixed(4))}};
   }
 
+
+  let visualOrientationPipelinePromise=null;
+  async function getVisualOrientationPipeline(){
+    if(!visualOrientationPipelinePromise){
+      visualOrientationPipelinePromise=(async()=>{
+        const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+        env.allowLocalModels=false;
+        env.useBrowserCache=true;
+        const onProgress=event=>{
+          if(event.status==='progress'&&event.total){
+            $('analysis-status').textContent='Downloading whole-image vision model… '+Math.round(event.progress||0)+'%';
+          }else if(event.status==='done'){
+            $('analysis-status').textContent='Whole-image vision model ready.';
+          }
+        };
+        try{
+          $('analysis-status').textContent='Loading whole-image vision model (WebGPU)…';
+          return await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{device:'webgpu',progress_callback:onProgress});
+        }catch(webgpuError){
+          log('WebGPU unavailable; loading the same vision model with browser CPU/WASM: '+webgpuError.message,'warn');
+          $('analysis-status').textContent='WebGPU unavailable; loading CPU vision model…';
+          return await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{progress_callback:onProgress});
+        }
+      })();
+    }
+    try{return await visualOrientationPipelinePromise;}catch(error){visualOrientationPipelinePromise=null;throw error;}
+  }
+  async function runWholeImageOrientation(bitmap){
+    const classifier=await getVisualOrientationPipeline();
+    const labels=[
+      'A correctly upright image, with the scene and subjects naturally oriented from top to bottom.',
+      'An upside-down image rotated 180 degrees, with the scene and subjects inverted.',
+      'A sideways image rotated 90 degrees clockwise.',
+      'A sideways image rotated 90 degrees counterclockwise.'
+    ];
+    const labelAngles=[0,180,90,270],results=[];
+    for(const angle of [0,90,180,270]){
+      $('analysis-status').textContent='Whole-image visual analysis: comparing '+angle+'° orientation…';
+      const candidate=makeRotatedAnalysisCanvas(bitmap,angle,640);
+      const scores=await classifier(candidate,labels);
+      const upright=Number(scores.find(item=>item.label===labels[0])?.score||0);
+      const sorted=[...scores].sort((a,b)=>b.score-a.score);
+      results.push({angle,uprightScore:upright,topLabel:sorted[0]?.label||'',topScore:Number(sorted[0]?.score||0)});
+    }
+    results.sort((a,b)=>b.uprightScore-a.uprightScore);
+    const best=results[0],second=results[1];
+    const margin=best.uprightScore-(second?.uprightScore||0);
+    const diagnostics=results.map(item=>({angle:item.angle,uprightScore:Number(item.uprightScore.toFixed(3)),topScore:Number(item.topScore.toFixed(3))}));
+    // CLIP is a general image/text similarity model, not a purpose-trained
+    // orientation detector. Require a strong score and a clear lead; otherwise
+    // never auto-rotate or claim that the image is upright.
+    if(!best||best.uprightScore<.52||margin<.12){
+      return {status:'review',method:'vision',message:'Whole-image vision analysis could not identify one orientation with high confidence. The image was left unchanged for manual review.',candidates:diagnostics,confidence:Number((best?.uprightScore||0).toFixed(3)),margin:Number(margin.toFixed(3))};
+    }
+    if(best.angle===0){
+      return {status:'upright',method:'vision',angle:0,confidence:Number(best.uprightScore.toFixed(3)),margin:Number(margin.toFixed(3)),message:'Whole-image vision analysis strongly favours the current orientation.' ,candidates:diagnostics};
+    }
+    return {status:'corrected',method:'vision',angle:best.angle,confidence:Number(best.uprightScore.toFixed(3)),margin:Number(margin.toFixed(3)),message:'Whole-image vision analysis recommends a '+best.angle+'° correction. Please verify the preview.',candidates:diagnostics};
+  }
+
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
-    $('analysis-status').textContent='Running on-device face analysis…';
-    let faceError=null;
+    $('analysis-status').textContent='Preparing whole-image visual analysis…';
     try{
-      const detector=await getFaceDetector(),candidates=[];
-      for(const angle of [0,90,180,270]){
-        const sample=makeRotatedAnalysisCanvas(bitmap,angle),result=detector.detect(sample);
-        let best=null;
-        for(const detection of (result.detections||[])){
-          const scored=scoreFaceOrientation(detection);
-          if(scored&&scored.confidence>=.35&&(!best||scored.score>best.score))best=scored;
-        }
-        if(best)candidates.push({angle,...best});
-      }
-      candidates.sort((a,b)=>b.score-a.score);
-      const best=candidates[0],second=candidates[1];
-      if(best&&best.confidence>=.35&&best.uprightness>=.58&&(!second||best.score-second.score>=.07)){
-        if(best.angle===0){
-          state.analysis.orientationCheck={status:'upright',method:'face',angle:0,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks indicate that this image is already upright.'};
-        }else{
-          state.rotation=best.angle;
-          state.analysis.orientationCheck={status:'corrected',method:'face',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks detected an incorrectly oriented face and applied a '+best.angle+'° correction.'};
-        }
-        state.analysis.subjectFocus=best.focus;
+      const visual=await runWholeImageOrientation(bitmap);
+      state.analysis.orientationCheck=visual;
+      if(visual.status==='corrected'){
+        state.rotation=visual.angle;
         if(index===currentEditorIndex)renderEditor();
         return;
       }
-    }catch(error){faceError=error;}
-    $('analysis-status').textContent='No reliable face direction; checking readable text…';
-    try{
-      const ocr=await runOcrOrientation(bitmap);
-      if(ocr.status==='corrected')state.rotation=ocr.angle;
-      state.analysis.orientationCheck=ocr;
+      if(visual.status==='upright'){
+        if(index===currentEditorIndex)renderEditor();
+        return;
+      }
+      // Keep specialist checks as secondary evidence only when the general
+      // whole-image model is uncertain. OCR alone may not declare upright.
+      $('analysis-status').textContent='Visual model uncertain; checking facial landmarks…';
+      try{
+        const detector=await getFaceDetector(),candidates=[];
+        for(const angle of [0,90,180,270]){
+          const sample=makeRotatedAnalysisCanvas(bitmap,angle),result=detector.detect(sample);
+          let best=null;
+          for(const detection of (result.detections||[])){
+            const scored=scoreFaceOrientation(detection);
+            if(scored&&scored.confidence>=.35&&(!best||scored.score>best.score))best=scored;
+          }
+          if(best)candidates.push({angle,...best});
+        }
+        candidates.sort((a,b)=>b.score-a.score);
+        const faceBest=candidates[0],faceSecond=candidates[1];
+        if(faceBest&&faceBest.confidence>=.35&&faceBest.uprightness>=.58&&(!faceSecond||faceBest.score-faceSecond.score>=.07)){
+          if(faceBest.angle===0){
+            state.analysis.orientationCheck={status:'upright',method:'face',angle:0,confidence:Number(faceBest.confidence.toFixed(3)),message:'Face landmarks independently indicate that this image is upright.'};
+          }else{
+            state.rotation=faceBest.angle;
+            state.analysis.orientationCheck={status:'corrected',method:'face',angle:faceBest.angle,confidence:Number(faceBest.confidence.toFixed(3)),message:'Face landmarks recommend a '+faceBest.angle+'° correction. Please verify the preview.'};
+          }
+          state.analysis.subjectFocus=faceBest.focus;
+        }
+      }catch(faceError){log('Secondary face check unavailable: '+faceError.message,'warn');}
     }catch(error){
-      state.analysis.orientationCheck={status:'unavailable',message:'Face analysis and on-device OCR could not complete. The image was left unchanged for manual review.'};
-      log('On-device orientation analysis unavailable: '+(faceError?faceError.message+'; ':'')+error.message,'error');
+      state.analysis.orientationCheck={status:'unavailable',method:'vision',message:'Whole-image vision model could not load or run. The image was left unchanged for manual review.'};
+      log('Whole-image vision analysis unavailable: '+error.message,'error');
     }
     if(index===currentEditorIndex)renderEditor();
   }
