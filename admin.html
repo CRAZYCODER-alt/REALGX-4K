@@ -62,7 +62,7 @@
           <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Bulk import images</button><span class="text-[11px] text-slate-500">Add many images at once; new images are added to the current editing queue.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Select multiple images or add more images later. Every import is appended; existing images and edits stay in the queue.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
 
         <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
@@ -139,7 +139,7 @@
   function isSupportedImage(file){
     return !!file && (file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(file.name||''));
   }
-  async function setFiles(files,append=false) {
+  async function setFiles(files,append=true) {
     const incoming=Array.from(files||[]);
     const valid=incoming.filter(isSupportedImage);
     const rejected=incoming.length-valid.length;
@@ -173,7 +173,7 @@
     });
     select.disabled=false;
     $('editor-image-count').textContent=selectedFiles.length+' image'+(selectedFiles.length===1?'':'s');
-    const targetIndex=append&&firstNewIndex>0?currentEditorIndex:0;
+    const targetIndex=append&&firstNewIndex>0&&currentEditorIndex<selectedFiles.length?currentEditorIndex:Math.max(0,firstNewIndex);
     currentEditorIndex=targetIndex;
     select.value=String(targetIndex);
     editorRenderToken++;
@@ -615,14 +615,14 @@
   }
 
   $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
-  $('files').addEventListener('change', e => { const files=Array.from(e.currentTarget.files||[]); e.currentTarget.value=''; if(files.length)setFiles(files,false); });
+  $('files').addEventListener('change', e => { const files=Array.from(e.currentTarget.files||[]); e.currentTarget.value=''; if(files.length)setFiles(files,true); });
   ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name, e => {
     e.preventDefault(); $('dropzone').classList.add('drop-active');
   }));
   ['dragleave','drop'].forEach(name => $('dropzone').addEventListener(name, e => {
     e.preventDefault(); $('dropzone').classList.remove('drop-active');
   }));
-  $('dropzone').addEventListener('drop', e => { if(e.dataTransfer?.files?.length)setFiles(e.dataTransfer.files,false); });
+  $('dropzone').addEventListener('drop', e => { if(e.dataTransfer?.files?.length)setFiles(e.dataTransfer.files,true); });
 
   async function requireAdmin(user) {
     if (!user || user.app_metadata?.role !== 'admin') {
