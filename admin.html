@@ -140,33 +140,17 @@
     selectedFiles=incoming.filter(f=>f.type.startsWith('image/'));
     imageStates=selectedFiles.map(()=>defaultImageState());
     imageBitmaps.forEach(b=>b?.close?.());imageBitmaps=selectedFiles.map(()=>null);
-    currentEditorIndex=0;renderSelected();
+    currentEditorIndex=0;editorRenderToken++;renderSelected();
     $('review-approved').checked=false;$('review-approved').disabled=true;$('upload-btn').disabled=true;
     if(selectedFiles.length!==incoming.length)log('Non-image files were ignored.','error');
     $('editor-file-select').innerHTML='';
-    selectedFiles.forEach((file,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent=file.name;$('editor-file-select').append(o);});
+    selectedFiles.forEach((file,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent=(index+1)+'. '+file.name;$('editor-file-select').append(o);});
     $('editor-file-select').disabled=!selectedFiles.length;
     if(!selectedFiles.length){clearEditor();return;}
-    $('analysis-status').textContent='Analyzing all selected images…';
+    $('analysis-status').textContent='Loading first image…';
     await prepareEditorImage(0);
-    for(let index=1;index<selectedFiles.length;index++){
-      try{
-        $('analysis-status').textContent='AI analysis '+(index+1)+' of '+selectedFiles.length+'…';
-        if(!imageBitmaps[index]){
-          const [bitmap,orientation]=await Promise.all([createImageBitmap(selectedFiles[index]),readExifOrientation(selectedFiles[index])]);
-          imageBitmaps[index]=bitmap;imageStates[index].exifOrientation=orientation;
-          imageStates[index].analysis=describeAnalysis(bitmap,orientation);
-        }
-        if(!imageStates[index].analysis?.orientationCheck)await runAutoOrientation(index);
-      }catch(error){
-        imageStates[index].analysis=imageStates[index].analysis||{width:0,height:0,ratio:0,kind:'Unknown',quality:'Not analyzed',orientation:1};
-        imageStates[index].analysis.orientationCheck={status:'review',message:'Automatic analysis could not process this file. Please inspect it manually.'};
-        log(selectedFiles[index].name+': '+error.message,'error');
-      }
-    }
     $('review-approved').disabled=false;
-    if(selectedFiles.length>1)log('Automatic analysis finished for all '+selectedFiles.length+' selected wallpapers. Review each image using the dropdown before publishing.','success');
-    if(currentEditorIndex===0)renderEditor();
+    if(selectedFiles.length>1)log('All '+selectedFiles.length+' images are ready. Choose any image from the dropdown to preview and analyse it.','success');
   }
   function clearEditor(){
     const canvas=$('editor-canvas');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);canvas.width=0;canvas.height=0;
@@ -202,20 +186,27 @@
   }
   async function prepareEditorImage(index){
     if(index<0||index>=selectedFiles.length)return;
-    currentEditorIndex=index;$('editor-file-select').value=String(index);$('editor-empty').classList.add('hidden');$('analysis-status').textContent='Analyzing image…';
+    currentEditorIndex=index;
+    $('editor-file-select').value=String(index);
+    $('editor-empty').classList.add('hidden');
+    $('analysis-status').textContent='Loading image…';
     const token=++editorRenderToken,file=selectedFiles[index];
     try{
       if(!imageBitmaps[index]){
-        const result=await Promise.all([createImageBitmap(file),readExifOrientation(file)]);
-        if(token!==editorRenderToken){result[0].close?.();return;}
-        imageBitmaps[index]=result[0];imageStates[index].exifOrientation=result[1];
-        imageStates[index].analysis=describeAnalysis(result[0],result[1]);
+        const [bitmap,orientation]=await Promise.all([createImageBitmap(file),readExifOrientation(file)]);
+        if(token!==editorRenderToken){bitmap.close?.();return;}
+        imageBitmaps[index]=bitmap;
+        imageStates[index].exifOrientation=orientation;
+        imageStates[index].analysis=describeAnalysis(bitmap,orientation);
       }
       if(token!==editorRenderToken)return;
       renderEditor();
       if(!imageStates[index].analysis?.orientationCheck)await runAutoOrientation(index);
       if(token===editorRenderToken)renderEditor();
-    }catch(error){$('analysis-status').textContent='Could not preview';log(file.name+': '+error.message,'error');}
+    }catch(error){
+      if(token===editorRenderToken)$('analysis-status').textContent='Could not preview';
+      log(file.name+': '+(error?.message||error),'error');
+    }
   }
   function renderEditor(){
     const bitmap=imageBitmaps[currentEditorIndex],state=imageStates[currentEditorIndex];if(!bitmap||!state)return;
@@ -497,28 +488,45 @@
     }
   }
 
+  async function makeCurrentViewBitmap(bitmap,state){
+    const swapped=Math.abs(state.rotation)%180===90;
+    const canvas=document.createElement('canvas');
+    canvas.width=swapped?bitmap.height:bitmap.width;
+    canvas.height=swapped?bitmap.width:bitmap.height;
+    const ctx=canvas.getContext('2d');
+    ctx.translate(canvas.width/2,canvas.height/2);
+    ctx.rotate(state.rotation*Math.PI/180);
+    ctx.scale(state.flipX?-1:1,state.flipY?-1:1);
+    ctx.drawImage(bitmap,-bitmap.width/2,-bitmap.height/2);
+    return await createImageBitmap(canvas);
+  }
+
   async function runAutoOrientation(index){
-    const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
+    const state=imageStates[index],bitmap=imageBitmaps[index];
+    if(!state||!bitmap||!state.analysis)return;
     if(orientationRunningIndex!==null)return;
     orientationRunningIndex=index;
     const button=$('auto-orient-current');
+    let analysisBitmap=null;
     button.disabled=true;
     button.setAttribute('aria-busy','true');
     button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
     if(index===currentEditorIndex)renderEditor();
     try{
-      const result=await runWholeImageOrientation(bitmap);
+      analysisBitmap=await makeCurrentViewBitmap(bitmap,state);
+      const result=await runWholeImageOrientation(analysisBitmap);
       state.analysis.orientationCheck=result;
-      if(result.status==='corrected')state.rotation=result.angle;
+      if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',method:'rotation-model',message:'The on-device rotation model could not load or run. The image was left unchanged for manual review.'};
-      log('On-device rotation model unavailable: '+error.message,'error');
+      log('On-device rotation model unavailable: '+(error?.message||error),'error');
     }finally{
+      analysisBitmap?.close?.();
       if(orientationRunningIndex===index)orientationRunningIndex=null;
       button.disabled=false;
       button.removeAttribute('aria-busy');
       button.textContent='↻ Re-run AI orientation check';
-      if(index===currentEditorIndex||currentEditorIndex<imageStates.length)renderEditor();
+      if(index===currentEditorIndex)renderEditor();
     }
   }
 
@@ -526,7 +534,7 @@
   function updateEditor(change){const s=currentState();if(!s)return;change(s);renderEditor();}
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
-  $('editor-file-select').addEventListener('change',e=>prepareEditorImage(Number(e.target.value)));
+  $('editor-file-select').addEventListener('change',e=>{const index=Number(e.target.value);if(Number.isInteger(index))prepareEditorImage(index);});
   $('auto-orient-current').addEventListener('click',async()=>{const i=currentEditorIndex;if(!imageBitmaps[i]||orientationRunningIndex!==null)return;imageStates[i].analysis.orientationCheck=null;renderEditor();await runAutoOrientation(i);});
   $('rotate-left').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+270)%360));
   $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
