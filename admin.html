@@ -231,6 +231,7 @@
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
+    if(orientationCheck?.method)lines.push('Analysis method: '+(orientationCheck.method==='ocr'?'On-device text recognition':'Face landmark detection'));
     if(orientationCheck)lines.push('AI orientation: '+orientationCheck.message);
     if(a.subjectFocus)lines.push('Detected subject focus: '+Math.round(a.subjectFocus.x*100)+'% horizontal, '+Math.round(a.subjectFocus.y*100)+'% vertical');
     lines.forEach((line,j)=>{
@@ -318,7 +319,7 @@
   }
   function makeRotatedAnalysisCanvas(bitmap,angle,maxDimension=640){
     const swap=angle===90||angle===270,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
-    const scale=Math.min(1,maxDimension/Math.max(w,h)),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));
+    const scale=Math.min(2,maxDimension/Math.max(w,h)),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));
     c.width=swap?rh:rw;c.height=swap?rw:rh;
     const ctx=c.getContext('2d');ctx.translate(c.width/2,c.height/2);ctx.rotate(angle*Math.PI/180);ctx.drawImage(bitmap,-rw/2,-rh/2,rw,rh);
     return c;
