@@ -62,11 +62,12 @@
           <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Bulk import images</button><span class="text-[11px] text-slate-500">Add many images at once; new images are added to the current editing queue.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
 
         <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
           <div class="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(240px,.8fr)] gap-4">
-            <div class="min-w-0 space-y-2"><div class="flex items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option>No images selected</option></select></div>
+            <div class="min-w-0 space-y-2"><div class="flex flex-wrap items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option value="">No images imported</option></select><span id="editor-image-count" class="text-[10px] text-slate-500 whitespace-nowrap">0 images</span></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
             <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Uses a dedicated 4-way rotation classifier on this device (0°, 90°, 180°, 270°). The model downloads once and is cached by your browser when storage allows.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">The AI checks the complete image and automatically rotates it when confidence is strong. Check the preview before publishing; uncertain results remain unchanged.</p></div>
@@ -105,7 +106,7 @@
   let imageStates = [];
   let imageBitmaps = [];
   let currentEditorIndex = 0;
-  let orientationRunningIndex = null;
+  const orientationRunningIndices = new Set();
   let editorRenderToken = 0;
   let faceDetectorPromise = null;
   let ocrWorkerPromise = null;
@@ -135,22 +136,52 @@
       : 'No files selected';
   }
   function defaultImageState(){return {rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null};}
-  async function setFiles(files) {
-    const incoming=Array.from(files || []);
-    selectedFiles=incoming.filter(f=>f.type.startsWith('image/'));
-    imageStates=selectedFiles.map(()=>defaultImageState());
-    imageBitmaps.forEach(b=>b?.close?.());imageBitmaps=selectedFiles.map(()=>null);
-    currentEditorIndex=0;editorRenderToken++;renderSelected();
+  function isSupportedImage(file){
+    return !!file && (file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(file.name||''));
+  }
+  async function setFiles(files,append=false) {
+    const incoming=Array.from(files||[]);
+    const valid=incoming.filter(isSupportedImage);
+    const rejected=incoming.length-valid.length;
+    if(!append){
+      imageBitmaps.forEach(b=>b?.close?.());
+      selectedFiles=[];imageStates=[];imageBitmaps=[];
+    }
+    const existing=new Set(selectedFiles.map(f=>f.name+'|'+f.size+'|'+f.lastModified));
+    const additions=valid.filter(f=>{
+      const key=f.name+'|'+f.size+'|'+f.lastModified;
+      if(existing.has(key))return false;
+      existing.add(key);return true;
+    });
+    const firstNewIndex=selectedFiles.length;
+    additions.forEach(file=>{selectedFiles.push(file);imageStates.push(defaultImageState());imageBitmaps.push(null);});
+    if(rejected)log(rejected+' unsupported file(s) were skipped.','error');
+    if(valid.length>additions.length)log((valid.length-additions.length)+' duplicate file(s) were skipped.','info');
+    renderSelected();
     $('review-approved').checked=false;$('review-approved').disabled=true;$('upload-btn').disabled=true;
-    if(selectedFiles.length!==incoming.length)log('Non-image files were ignored.','error');
-    $('editor-file-select').innerHTML='';
-    selectedFiles.forEach((file,index)=>{const o=document.createElement('option');o.value=String(index);o.textContent=(index+1)+'. '+file.name;$('editor-file-select').append(o);});
-    $('editor-file-select').disabled=!selectedFiles.length;
-    if(!selectedFiles.length){clearEditor();return;}
-    $('analysis-status').textContent='Loading first image…';
-    await prepareEditorImage(0);
+    const select=$('editor-file-select');
+    select.replaceChildren();
+    if(!selectedFiles.length){
+      const option=document.createElement('option');option.value='';option.textContent='No images imported';select.append(option);
+      select.disabled=true;$('editor-image-count').textContent='0 images';clearEditor();return;
+    }
+    selectedFiles.forEach((file,index)=>{
+      const option=document.createElement('option');
+      option.value=String(index);
+      option.textContent=String(index+1).padStart(2,'0')+' · '+file.name;
+      select.append(option);
+    });
+    select.disabled=false;
+    $('editor-image-count').textContent=selectedFiles.length+' image'+(selectedFiles.length===1?'':'s');
+    const targetIndex=append&&firstNewIndex>0?currentEditorIndex:0;
+    currentEditorIndex=targetIndex;
+    select.value=String(targetIndex);
+    editorRenderToken++;
+    $('analysis-status').textContent='Loading selected image…';
+    if(additions.length||!imageBitmaps[targetIndex])await prepareEditorImage(targetIndex);
     $('review-approved').disabled=false;
-    if(selectedFiles.length>1)log('All '+selectedFiles.length+' images are ready. Choose any image from the dropdown to preview and analyse it.','success');
+    if(additions.length)log(append?'Added '+additions.length+' image(s). The dropdown now contains all '+selectedFiles.length+' imported images.':'Imported '+selectedFiles.length+' image(s). The dropdown contains the complete image list.','success');
+    else if(!valid.length)log('No supported image files were selected.','error');
   }
   function clearEditor(){
     const canvas=$('editor-canvas');canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);canvas.width=0;canvas.height=0;
@@ -220,7 +251,7 @@
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
     ctx.drawImage(bitmap,-w*fit/2,-h*fit/2,w*fit,h*fit);ctx.restore();
     const a=state.analysis,orientationCheck=a.orientationCheck;
-    $('analysis-status').textContent=orientationRunningIndex===currentEditorIndex?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Ready for AI analysis';
+    $('analysis-status').textContent=orientationRunningIndices.has(currentEditorIndex)?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Ready for AI analysis';
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
@@ -503,15 +534,15 @@
 
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];
-    if(!state||!bitmap||!state.analysis)return;
-    if(orientationRunningIndex!==null)return;
-    orientationRunningIndex=index;
-    const button=$('auto-orient-current');
+    if(!state||!bitmap||!state.analysis||orientationRunningIndices.has(index))return;
+    orientationRunningIndices.add(index);
     let analysisBitmap=null;
-    button.disabled=true;
-    button.setAttribute('aria-busy','true');
-    button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
-    if(index===currentEditorIndex)renderEditor();
+    if(index===currentEditorIndex){
+      const button=$('auto-orient-current');
+      button.disabled=true;button.setAttribute('aria-busy','true');
+      button.innerHTML='<span class="inline-flex items-center justify-center gap-2"><span class="h-3 w-3 rounded-full border-2 border-cyan-200/30 border-t-cyan-200 animate-spin"></span> Analysing image…</span>';
+      renderEditor();
+    }
     try{
       analysisBitmap=await makeCurrentViewBitmap(bitmap,state);
       const result=await runWholeImageOrientation(analysisBitmap);
@@ -522,11 +553,13 @@
       log('On-device rotation model unavailable: '+(error?.message||error),'error');
     }finally{
       analysisBitmap?.close?.();
-      if(orientationRunningIndex===index)orientationRunningIndex=null;
-      button.disabled=false;
-      button.removeAttribute('aria-busy');
-      button.textContent='↻ Re-run AI orientation check';
-      if(index===currentEditorIndex)renderEditor();
+      orientationRunningIndices.delete(index);
+      if(index===currentEditorIndex){
+        const button=$('auto-orient-current');
+        button.disabled=false;button.removeAttribute('aria-busy');
+        button.textContent='↻ Re-run AI orientation check';
+        renderEditor();
+      }
     }
   }
 
@@ -534,8 +567,25 @@
   function updateEditor(change){const s=currentState();if(!s)return;change(s);renderEditor();}
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
-  $('editor-file-select').addEventListener('change',e=>{const index=Number(e.target.value);if(Number.isInteger(index))prepareEditorImage(index);});
-  $('auto-orient-current').addEventListener('click',async()=>{const i=currentEditorIndex;if(!imageBitmaps[i]||orientationRunningIndex!==null)return;imageStates[i].analysis.orientationCheck=null;renderEditor();await runAutoOrientation(i);});
+  $('editor-file-select').addEventListener('change',e=>{
+    const index=Number(e.currentTarget.value);
+    if(Number.isInteger(index)&&index>=0&&index<selectedFiles.length){
+      currentEditorIndex=index;
+      editorRenderToken++;
+      prepareEditorImage(index);
+    }
+  });
+  $('bulk-import-btn').addEventListener('click',()=>$('bulk-files').click());
+  $('bulk-files').addEventListener('change',e=>{
+    const files=Array.from(e.currentTarget.files||[]);
+    e.currentTarget.value='';
+    if(files.length)setFiles(files,true);
+  });
+  $('auto-orient-current').addEventListener('click',async()=>{
+    const i=currentEditorIndex;
+    if(!imageBitmaps[i]||orientationRunningIndices.has(i))return;
+    imageStates[i].analysis.orientationCheck=null;renderEditor();await runAutoOrientation(i);
+  });
   $('rotate-left').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+270)%360));
   $('rotate-right').addEventListener('click',()=>updateEditor(s=>s.rotation=(s.rotation+90)%360));
   $('flip-x').addEventListener('click',()=>updateEditor(s=>s.flipX=!s.flipX));
@@ -565,14 +615,14 @@
   }
 
   $('dropzone').addEventListener('click', e => { if (e.target !== $('files')) $('files').click(); });
-  $('files').addEventListener('change', e => { const files=Array.from(e.target.files||[]); e.target.value=''; setFiles(files); });
+  $('files').addEventListener('change', e => { const files=Array.from(e.currentTarget.files||[]); e.currentTarget.value=''; if(files.length)setFiles(files,false); });
   ['dragenter','dragover'].forEach(name => $('dropzone').addEventListener(name, e => {
     e.preventDefault(); $('dropzone').classList.add('drop-active');
   }));
   ['dragleave','drop'].forEach(name => $('dropzone').addEventListener(name, e => {
     e.preventDefault(); $('dropzone').classList.remove('drop-active');
   }));
-  $('dropzone').addEventListener('drop', e => setFiles(e.dataTransfer.files));
+  $('dropzone').addEventListener('drop', e => { if(e.dataTransfer?.files?.length)setFiles(e.dataTransfer.files,false); });
 
   async function requireAdmin(user) {
     if (!user || user.app_metadata?.role !== 'admin') {
