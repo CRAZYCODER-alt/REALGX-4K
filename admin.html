@@ -69,7 +69,7 @@
             <div class="min-w-0 space-y-2"><div class="flex items-center gap-2"><label class="text-xs text-slate-400" for="editor-file-select">Editing image</label><select id="editor-file-select" class="field min-w-0 flex-1 rounded-lg p-2 text-xs" disabled><option>No images selected</option></select></div>
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
-            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Analyzes image dimensions and checks face landmarks to help determine upright orientation.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">Face-based orientation is automatic when clear facial landmarks are detected. Other images remain unchanged for admin review.</p></div>
+            <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Automatic image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device ML</span></div><div id="analysis-details" class="space-y-1 text-xs text-slate-300"><p>Analyzes dimensions, face landmarks and readable text orientation on this device.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Re-run AI orientation check</button><p class="text-[10px] leading-relaxed text-amber-200/80">Uses face landmarks first, then on-device OCR for text-bearing images. Images without reliable evidence remain unchanged for manual review.</p></div>
               <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button><button type="button" id="flip-x" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -107,6 +107,8 @@
   let currentEditorIndex = 0;
   let editorRenderToken = 0;
   let faceDetectorPromise = null;
+  let ocrWorkerPromise = null;
+  let tesseractScriptPromise = null;
 
   function log(message, kind='info') {
     const p = document.createElement('p');
@@ -255,9 +257,68 @@
     }
     try{return await faceDetectorPromise;}catch(error){faceDetectorPromise=null;throw error;}
   }
-  function makeRotatedAnalysisCanvas(bitmap,angle){
+
+  async function loadTesseract(){
+    if(window.Tesseract)return window.Tesseract;
+    if(!tesseractScriptPromise){
+      tesseractScriptPromise=new Promise((resolve,reject)=>{
+        const script=document.createElement('script');
+        script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        script.async=true;
+        script.onload=()=>window.Tesseract?resolve(window.Tesseract):reject(new Error('OCR library API unavailable.'));
+        script.onerror=()=>reject(new Error('Could not load the on-device OCR library.'));
+        document.head.appendChild(script);
+      });
+    }
+    return tesseractScriptPromise;
+  }
+  async function getOcrWorker(){
+    if(!ocrWorkerPromise){
+      ocrWorkerPromise=(async()=>{
+        const Tesseract=await loadTesseract();
+        const worker=await Tesseract.createWorker('eng',1,{
+          logger:m=>{
+            if(m.status==='recognizing text')$('analysis-status').textContent='On-device text analysis… '+Math.round((m.progress||0)*100)+'%';
+          }
+        });
+        await worker.setParameters({tessedit_pageseg_mode:Tesseract.PSM.SPARSE_TEXT});
+        return worker;
+      })();
+    }
+    try{return await ocrWorkerPromise;}catch(error){ocrWorkerPromise=null;throw error;}
+  }
+  function scoreOcrResult(data){
+    const text=String(data.text||'').replace(/[^\\p{L}\\p{N}]+/gu,' ').trim();
+    const chars=text.replace(/\\s/g,'').length;
+    const words=text.split(/\\s+/).filter(Boolean).length;
+    const confidence=Number(data.confidence||0);
+    const score=confidence*(.55+.45*Math.min(1,chars/18))+Math.min(words,8)*1.2;
+    return {score,confidence,chars,words,text:text.slice(0,100)};
+  }
+  async function runOcrOrientation(bitmap){
+    const worker=await getOcrWorker(),candidates=[];
+    for(const angle of [0,90,180,270]){
+      $('analysis-status').textContent='Checking text orientation '+angle+'°…';
+      const sample=makeRotatedAnalysisCanvas(bitmap,angle,1200);
+      const result=await worker.recognize(sample);
+      candidates.push({angle,...scoreOcrResult(result.data||{})});
+    }
+    candidates.sort((a,b)=>b.score-a.score);
+    const best=candidates[0],second=candidates[1];
+    const enoughText=best&&best.chars>=8&&best.words>=2;
+    const clearLead=best&&best.confidence>=42&&(!second||best.score-second.score>=8);
+    const diagnostics=candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(1)),characters:c.chars,words:c.words}));
+    if(!enoughText||!clearLead){
+      return {status:'review',method:'ocr',message:enoughText?'Text was found, but its orientation was not clear enough to rotate safely.':'OCR could not find enough readable text to determine orientation. The image was left unchanged.',candidates:diagnostics};
+    }
+    if(best.angle===0){
+      return {status:'upright',method:'ocr',angle:0,confidence:Number(best.confidence.toFixed(1)),message:'On-device text recognition indicates that this image is already upright.',candidates:diagnostics};
+    }
+    return {status:'corrected',method:'ocr',angle:best.angle,confidence:Number(best.confidence.toFixed(1)),message:'On-device text recognition found a clearer reading orientation and rotated the image '+best.angle+'°.',recognizedText:best.text,candidates:diagnostics};
+  }
+  function makeRotatedAnalysisCanvas(bitmap,angle,maxDimension=640){
     const swap=angle===90||angle===270,w=bitmap.width,h=bitmap.height,c=document.createElement('canvas');
-    const scale=Math.min(1,640/Math.max(w,h)),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));
+    const scale=Math.min(1,maxDimension/Math.max(w,h)),rw=Math.max(1,Math.round(w*scale)),rh=Math.max(1,Math.round(h*scale));
     c.width=swap?rh:rw;c.height=swap?rw:rh;
     const ctx=c.getContext('2d');ctx.translate(c.width/2,c.height/2);ctx.rotate(angle*Math.PI/180);ctx.drawImage(bitmap,-rw/2,-rh/2,rw,rh);
     return c;
@@ -280,9 +341,11 @@
     const score=uprightness*.78+confidence*.22;
     return {score,confidence,uprightness,noseDrop,mouthDrop,focus:{x:Number(((eyeA.x+eyeB.x+nose.x+mouth.x)/4).toFixed(4)),y:Number(((eyeA.y+eyeB.y+nose.y+mouth.y)/4).toFixed(4))}};
   }
+
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];if(!state||!bitmap)return;
-    $('analysis-status').textContent='Running on-device vision check…';
+    $('analysis-status').textContent='Running on-device face analysis…';
+    let faceError=null;
     try{
       const detector=await getFaceDetector(),candidates=[];
       for(const angle of [0,90,180,270]){
@@ -296,21 +359,26 @@
       }
       candidates.sort((a,b)=>b.score-a.score);
       const best=candidates[0],second=candidates[1];
-      if(!best||best.confidence<.35||best.uprightness<.58){
-        state.analysis.orientationCheck={status:'review',message:'No confidently oriented human face was found in this image. Face-based rotation cannot reliably judge scenery, objects or many illustrations, so the image was left unchanged.',candidates:candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(2)),uprightness:Number(c.uprightness.toFixed(2))}))};
-      }else if(second&&best.score-second.score<.07){
-        state.analysis.orientationCheck={status:'review',message:'More than one rotation looks plausible to the face detector. No automatic rotation was applied.',candidates:candidates.map(c=>({angle:c.angle,confidence:Number(c.confidence.toFixed(2)),uprightness:Number(c.uprightness.toFixed(2))}))};
-      }else if(best.angle===0){
-        state.analysis.orientationCheck={status:'upright',angle:0,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks indicate that this image is already upright.'};
+      if(best&&best.confidence>=.35&&best.uprightness>=.58&&(!second||best.score-second.score>=.07)){
+        if(best.angle===0){
+          state.analysis.orientationCheck={status:'upright',method:'face',angle:0,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks indicate that this image is already upright.'};
+        }else{
+          state.rotation=best.angle;
+          state.analysis.orientationCheck={status:'corrected',method:'face',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),message:'Face landmarks detected an incorrectly oriented face and applied a '+best.angle+'° correction.'};
+        }
         state.analysis.subjectFocus=best.focus;
-      }else{
-        state.rotation=best.angle;
-        state.analysis.orientationCheck={status:'corrected',angle:best.angle,confidence:Number(best.confidence.toFixed(3)),message:'AI detected an incorrectly oriented face and applied a '+best.angle+'° correction.'};
-        state.analysis.subjectFocus=best.focus;
+        if(index===currentEditorIndex)renderEditor();
+        return;
       }
+    }catch(error){faceError=error;}
+    $('analysis-status').textContent='No reliable face direction; checking readable text…';
+    try{
+      const ocr=await runOcrOrientation(bitmap);
+      if(ocr.status==='corrected')state.rotation=ocr.angle;
+      state.analysis.orientationCheck=ocr;
     }catch(error){
-      state.analysis.orientationCheck={status:'unavailable',message:'On-device face analysis could not load. EXIF and resolution checks are complete; please review orientation manually.'};
-      log('AI orientation model unavailable: '+error.message,'error');
+      state.analysis.orientationCheck={status:'unavailable',message:'Face analysis and on-device OCR could not complete. The image was left unchanged for manual review.'};
+      log('On-device orientation analysis unavailable: '+(faceError?faceError.message+'; ':'')+error.message,'error');
     }
     if(index===currentEditorIndex)renderEditor();
   }
