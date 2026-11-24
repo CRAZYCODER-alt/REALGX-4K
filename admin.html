@@ -90,7 +90,7 @@
               <div class="rounded-lg border border-slate-800 bg-slate-950 p-2"><p class="text-[10px] font-bold text-slate-400 mb-2">BEFORE</p><img id="upscale-source-preview" class="w-full h-40 object-contain rounded" alt="Original adjusted image preview"></div>
               <div class="rounded-lg border border-violet-500/30 bg-slate-950 p-2"><p class="text-[10px] font-bold text-violet-300 mb-2">AFTER · AI UPSCALED</p><img id="upscale-result-preview" class="w-full h-40 object-contain rounded" alt="AI upscaled image preview"></div>
             </div>
-            <p class="text-[10px] leading-relaxed text-slate-500">Processing stays in your browser; model downloads may use your internet connection. 4× processing is limited to smaller images to avoid exhausting browser memory. Publishing still uses the existing 3 MB upload limit.</p>
+            <p class="text-[10px] leading-relaxed text-slate-500">Processing stays in your browser; model downloads may use your internet connection. 4× processing is limited to smaller images to avoid exhausting browser memory. Publishing still uses the existing 3 MB upload limit. Model export: <a class="text-violet-300 underline" href="https://huggingface.co/thisismert/real-esrgan-onnx" target="_blank" rel="noopener">Real-ESRGAN ONNX · BSD-3-Clause</a>.</p>
           </section>
         </section>
         <label class="mt-4 flex items-start gap-2 text-xs text-slate-300"><input id="review-approved" type="checkbox" class="mt-0.5 accent-cyan-400"> I reviewed the selected image previews and approve publishing the corrected versions.</label>
@@ -714,6 +714,7 @@
     const removedIndex=currentEditorIndex;
     const removedName=selectedFiles[removedIndex]?.name||'Image';
     editorRenderToken++;
+    clearUpscaleResult(imageStates[removedIndex]);
     imageBitmaps[removedIndex]?.close?.();
     selectedFiles.splice(removedIndex,1);
     imageStates.splice(removedIndex,1);
@@ -795,7 +796,8 @@
     if(!state)return;
     if(state.upscaleSourceUrl)URL.revokeObjectURL(state.upscaleSourceUrl);
     if(state.upscaleResultUrl)URL.revokeObjectURL(state.upscaleResultUrl);
-    state.upscaledBlob=null;state.upscaleSourceUrl=null;state.upscaleResultUrl=null;
+    if(state.upscaleBasePreviewUrl)URL.revokeObjectURL(state.upscaleBasePreviewUrl);
+    state.upscaledBlob=null;state.upscaleSourceUrl=null;state.upscaleResultUrl=null;state.upscaleBasePreviewUrl=null;
     state.upscaleWidth=0;state.upscaleHeight=0;state.upscaleScale=0;state.upscaleModel='';
     if(typeof $==='function'&&$('upscale-result-preview')){
       $('upscale-source-preview').removeAttribute('src');
@@ -818,11 +820,8 @@
       $('upscale-result-preview').removeAttribute('src');
       $('upscale-dimensions').textContent='';
       if(file){
-        if(!$('upscale-source-preview').src){
-          const previewUrl=URL.createObjectURL(file);
-          $('upscale-source-preview').src=previewUrl;
-          $('upscale-source-preview').dataset.temporaryUrl=previewUrl;
-        }
+        if(!state.upscaleBasePreviewUrl)state.upscaleBasePreviewUrl=URL.createObjectURL(file);
+        $('upscale-source-preview').src=state.upscaleBasePreviewUrl;
         $('upscale-status').textContent='Ready. Choose a model style and output size, then run the upscaler.';
       }else{
         $('upscale-source-preview').removeAttribute('src');
@@ -963,6 +962,7 @@
     }finally{
       sourceBitmap?.close?.();if(resultCanvas){resultCanvas.width=0;resultCanvas.height=0;}
       upscalerBusy=false;$('upscale-run').disabled=!selectedFiles[index];$('upscale-download').disabled=!imageStates[index]?.upscaledBlob;
+      refreshUpscalerPanel(index);
     }
   });
   $('upscale-download').addEventListener('click',()=>{
