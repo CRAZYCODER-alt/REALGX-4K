@@ -393,6 +393,13 @@
         const {pipeline,env}=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
         env.allowLocalModels=false;
         env.useBrowserCache=true;
+
+        // Pin ONNX Runtime's WASM assets explicitly. This avoids relying on
+        // relative CDN paths when the library is imported as a browser module.
+        env.backends.onnx.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2/dist/';
+        // Single-threaded WASM works without cross-origin isolation headers.
+        env.backends.onnx.wasm.numThreads=1;
+
         const onProgress=event=>{
           if(event.status==='progress'&&event.total){
             $('analysis-status').textContent='Downloading whole-image vision model… '+Math.round(event.progress||0)+'%';
@@ -400,13 +407,31 @@
             $('analysis-status').textContent='Whole-image vision model ready.';
           }
         };
+        const task='zero-shot-image-classification';
+        const model='Xenova/clip-vit-base-patch32';
+
+        // Only try WebGPU when the browser can actually provide an adapter.
+        let gpuAvailable=false;
         try{
-          $('analysis-status').textContent='Loading whole-image vision model (WebGPU)…';
-          return await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{device:'webgpu',progress_callback:onProgress});
-        }catch(webgpuError){
-          log('WebGPU unavailable; loading the same vision model with browser CPU/WASM: '+webgpuError.message,'warn');
-          $('analysis-status').textContent='WebGPU unavailable; loading CPU vision model…';
-          return await pipeline('zero-shot-image-classification','Xenova/clip-vit-base-patch32',{progress_callback:onProgress});
+          gpuAvailable=!!(navigator.gpu && await navigator.gpu.requestAdapter());
+        }catch(e){gpuAvailable=false;}
+
+        if(gpuAvailable){
+          try{
+            $('analysis-status').textContent='Loading whole-image vision model (WebGPU)…';
+            return await pipeline(task,model,{device:'webgpu',progress_callback:onProgress});
+          }catch(webgpuError){
+            log('WebGPU could not start; switching to CPU/WASM: '+webgpuError.message,'warn');
+          }
+        }else{
+          log('WebGPU adapter unavailable; using CPU/WASM instead.','info');
+        }
+
+        $('analysis-status').textContent='Loading whole-image vision model (CPU/WASM)…';
+        try{
+          return await pipeline(task,model,{progress_callback:onProgress});
+        }catch(wasmError){
+          throw new Error('CPU/WASM backend failed to initialise. Check that the ONNX WASM files are reachable and that browser extensions or network filters are not blocking jsDelivr. Details: '+(wasmError?.message||wasmError));
         }
       })();
     }
