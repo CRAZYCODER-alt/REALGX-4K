@@ -568,7 +568,7 @@
   async function detectMirrorCorrection(bitmap){
     let worker;
     try{worker=await getOcrWorker();}
-    catch(error){log('On-device mirror check unavailable; continuing with rotation analysis. '+(error?.message||error),'warn');return null;}
+    catch(error){log('On-device mirror check unavailable; continuing with rotation analysis. '+(error?.message||error),'warn');return {status:'review',reason:'Mirror direction could not be checked on this device.'};}
     const candidates=[];
     for(const flipX of [false,true])for(const angle of [0,90,180,270]){
       $('analysis-status').textContent='Checking mirror direction… '+(candidates.length+1)+'/8';
@@ -580,8 +580,9 @@
     const best=candidates[0],second=candidates[1];
     const enoughText=best&&best.chars>=8&&best.words>=2;
     const clearLead=best&&best.confidence>=55&&second&&best.score-second.score>=12;
-    if(!enoughText||!clearLead||!best.flipX)return null;
-    return {angle:best.angle,flipX:true,confidence:Number(best.confidence.toFixed(1)),margin:Number((best.score-second.score).toFixed(1)),recognizedText:best.text};
+    if(!enoughText||!clearLead)return {status:'review',reason:'There was not enough clearly readable text to verify whether the image is mirrored.'};
+    if(!best.flipX)return {status:'clear'};
+    return {status:'corrected',angle:best.angle,flipX:true,confidence:Number(best.confidence.toFixed(1)),margin:Number((best.score-second.score).toFixed(1)),recognizedText:best.text};
   }
   async function runAutoOrientation(index){
     const state=imageStates[index],bitmap=imageBitmaps[index];
@@ -598,14 +599,19 @@
       analysisBitmap=await makeCurrentViewBitmap(bitmap,state);
       let mirrorResult=null;
       try{mirrorResult=await detectMirrorCorrection(analysisBitmap);}
-      catch(error){log('Mirror analysis could not complete; continuing with rotation analysis. '+(error?.message||error),'warn');}
-      if(mirrorResult){
+      catch(error){log('Mirror analysis could not complete; continuing with rotation analysis. '+(error?.message||error),'warn');mirrorResult={status:'review',reason:'Mirror direction could not be verified.'};}
+      if(mirrorResult?.status==='corrected'){
         applyRelativeEditorTransform(state,mirrorResult.angle,mirrorResult.flipX);
         state.analysis.orientationCheck={status:'corrected',method:'ocr-mirror',angle:mirrorResult.angle,flipX:true,confidence:mirrorResult.confidence,margin:mirrorResult.margin,recognizedText:mirrorResult.recognizedText,message:'On-device text analysis detected a mirrored image and corrected its orientation. Please review the preview.'};
       }else{
         const result=await runWholeImageOrientation(analysisBitmap);
-        state.analysis.orientationCheck=result;
         if(result.status==='corrected')state.rotation=(state.rotation+result.angle)%360;
+        if(mirrorResult?.status==='review'){
+          result.status='review';
+          result.message=(result.message||'Rotation analysis finished.')+' '+mirrorResult.reason+' Please check horizontal and vertical direction manually before publishing.';
+          result.mirrorCheck='manual-review';
+        }
+        state.analysis.orientationCheck=result;
       }
     }catch(error){
       state.analysis.orientationCheck={status:'unavailable',method:'rotation-model',message:'The on-device rotation model could not load or run. The image was left unchanged for manual review.'};
