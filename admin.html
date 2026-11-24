@@ -81,16 +81,16 @@
             <div class="flex flex-wrap items-start justify-between gap-2"><div><h3 class="text-sm font-black text-violet-200">REALGX AI Upscaler</h3><p class="text-[11px] text-slate-400 mt-1">Enhance the currently selected wallpaper on this device. The original remains untouched.</p></div><span class="text-[9px] text-violet-200 border border-violet-400/30 rounded-full px-2 py-1">On-device · Real-ESRGAN</span></div>
             <div class="grid sm:grid-cols-2 gap-2">
               <label class="text-xs text-slate-300">Image style<select id="upscale-model" class="field mt-1 w-full rounded-lg p-2"><option value="general">Photo / general wallpaper</option><option value="anime">Anime / illustration</option></select></label>
-              <label class="text-xs text-slate-300">Output size<select id="upscale-scale" class="field mt-1 w-full rounded-lg p-2"><option value="2">2× · Recommended</option><option value="4">4× · Smaller sources only</option></select></label>
+              <label class="text-xs text-slate-300">Output size<select id="upscale-scale" class="field mt-1 w-full rounded-lg p-2"><option value="2">2× · Recommended</option></select></label>
             </div>
-            <div class="flex flex-wrap gap-2"><button type="button" id="upscale-run" class="rounded-lg bg-violet-500 px-4 py-2.5 text-xs font-black text-white hover:bg-violet-400 disabled:opacity-40" disabled>✦ Upscale selected image</button><button type="button" id="upscale-download" class="rounded-lg border border-violet-400/40 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40" disabled>Download enhanced image</button></div>
+            <div class="flex flex-wrap gap-2"><button type="button" id="upscale-run" class="rounded-lg bg-violet-500 px-4 py-2.5 text-xs font-black text-white hover:bg-violet-400 disabled:opacity-40" disabled>✦ Upscale selected image</button><button type="button" id="upscale-cancel" class="rounded-lg border border-rose-400/40 px-4 py-2.5 text-xs font-bold text-rose-200 disabled:opacity-40" disabled>Cancel</button><button type="button" id="upscale-download" class="rounded-lg border border-violet-400/40 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40" disabled>Download enhanced image</button></div>
             <p id="upscale-status" class="text-[11px] text-slate-300" aria-live="polite">Import an image to enable upscaling. The AI model downloads only when you first run it and is cached by your browser when supported.</p>
             <p id="upscale-dimensions" class="text-[10px] text-slate-500"></p>
             <div class="grid sm:grid-cols-2 gap-3">
               <div class="rounded-lg border border-slate-800 bg-slate-950 p-2"><p class="text-[10px] font-bold text-slate-400 mb-2">BEFORE</p><img id="upscale-source-preview" class="w-full h-40 object-contain rounded" alt="Original adjusted image preview"></div>
               <div class="rounded-lg border border-violet-500/30 bg-slate-950 p-2"><p class="text-[10px] font-bold text-violet-300 mb-2">AFTER · AI UPSCALED</p><img id="upscale-result-preview" class="w-full h-40 object-contain rounded" alt="AI upscaled image preview"></div>
             </div>
-            <p class="text-[10px] leading-relaxed text-slate-500">Processing stays in your browser; model downloads may use your internet connection. 4× processing is limited to smaller images to avoid exhausting browser memory. Publishing still uses the existing 3 MB upload limit. Model export: <a class="text-violet-300 underline" href="https://huggingface.co/thisismert/real-esrgan-onnx" target="_blank" rel="noopener">Real-ESRGAN ONNX · BSD-3-Clause</a>.</p>
+            <p class="text-[10px] leading-relaxed text-slate-500">Processing stays in your browser. The general model uses native 2× inference; anime uses its dedicated 4× model and scales the result to 2×. Larger tiles reduce the number of inference steps. Publishing still uses the existing 3 MB upload limit. Models: <a class="text-violet-300 underline" href="https://huggingface.co/SceneWorks/real-esrgan-onnx" target="_blank" rel="noopener">2× general</a> · <a class="text-violet-300 underline" href="https://huggingface.co/thisismert/real-esrgan-onnx" target="_blank" rel="noopener">4× anime</a> · BSD-3-Clause.</p>
           </section>
         </section>
         <label class="mt-4 flex items-start gap-2 text-xs text-slate-300"><input id="review-approved" type="checkbox" class="mt-0.5 accent-cyan-400"> I reviewed the selected image previews and approve publishing the corrected versions.</label>
@@ -792,7 +792,11 @@
   let upscalerSession=null;
   let upscalerSessionKind='';
   let upscalerBusy=false;
-  const UPSCALER_MODEL_BASE='https://huggingface.co/thisismert/real-esrgan-onnx/resolve/main/onnx/';
+  let upscalerCancelRequested=false;
+  const UPSCALER_MODEL_URLS={
+    general:'https://huggingface.co/SceneWorks/real-esrgan-onnx/resolve/main/real_esrgan_x2.onnx',
+    anime:'https://huggingface.co/thisismert/real-esrgan-onnx/resolve/main/onnx/RealESRGAN_x4plus_anime_6B.onnx'
+  };
   function clearUpscaleResult(state){
     if(!state)return;
     if(state.upscaleSourceUrl)URL.revokeObjectURL(state.upscaleSourceUrl);
@@ -857,8 +861,7 @@
     if(upscalerSession){try{await upscalerSession.release();}catch(error){}upscalerSession=null;upscalerSessionKind='';}
     const ort=await loadUpscalerRuntime();
     if(ort.env?.wasm)ort.env.wasm.wasmPaths='https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
-    const modelName=kind==='anime'?'RealESRGAN_x4plus_anime_6B.onnx':'realesr-general-x4v3.onnx';
-    const modelBytes=await fetchUpscalerModel(UPSCALER_MODEL_BASE+modelName);
+    const modelBytes=await fetchUpscalerModel(UPSCALER_MODEL_URLS[kind]||UPSCALER_MODEL_URLS.general);
     $('upscale-status').textContent='Preparing AI model on this device…';
     let session,backend='WebGPU';
     if('gpu'in navigator){
@@ -883,7 +886,10 @@
     try{
       const feeds={};feeds[session.inputNames[0]]=tensor;
       const outputs=await session.run(feeds),output=outputs[session.outputNames[0]];
-      const outW=paddedW*4,outH=paddedH*4,outPlane=outW*outH,data=output.data;
+      const outW=output.dims[3],outH=output.dims[2],outPlane=outW*outH;
+      const modelScale=Math.round(outW/paddedW);
+      if(![2,4].includes(modelScale)||outH!==paddedH*modelScale)throw new Error('Unexpected AI model output dimensions.');
+      const data=output.data;
       const rgba=new ImageData(outW,outH);
       for(let i=0;i<outPlane;i++){
         rgba.data[i*4]=Math.max(0,Math.min(255,Math.round(data[i]*255)));
@@ -893,29 +899,34 @@
       }
       const resultCanvas=document.createElement('canvas');resultCanvas.width=outW;resultCanvas.height=outH;
       resultCanvas.getContext('2d').putImageData(rgba,0,0);
+      resultCanvas.dataset.modelScale=String(modelScale);
       return resultCanvas;
     }finally{tensor.dispose?.();}
   }
   async function runRealEsrgan(sourceCanvas,kind,scale){
     const width=sourceCanvas.width,height=sourceCanvas.height,outW=width*scale,outH=height*scale;
-    const maxPixels=scale===4?24000000:36000000;
+    const maxPixels=36000000;
     if(outW*outH>maxPixels)throw new Error('This image is too large for '+scale+'× output in a browser. Choose 2× or use a smaller source image.');
     const {session,ort,backend}=await getUpscalerSession(kind);
     const outputCanvas=document.createElement('canvas');outputCanvas.width=outW;outputCanvas.height=outH;
     const outputCtx=outputCanvas.getContext('2d');
-    const tileSize=128,overlap=16,step=tileSize-overlap*2;
+    const tileSize=256,overlap=16,step=tileSize-overlap*2;
     let completed=0,total=0;
     for(let y=0;y<height;){for(let x=0;x<width;){total++;if(x+tileSize>=width)break;x+=step;}if(y+tileSize>=height)break;y+=step;}
     let done=0;
     for(let y=0;y<height;){
       for(let x=0;x<width;){
         const tileW=Math.min(tileSize,width-x),tileH=Math.min(tileSize,height-y);
-        $('upscale-status').textContent='AI enhancing image… '+(++done)+' / '+total+' tiles · '+backend;
+        if(upscalerCancelRequested)throw new DOMException('Upscaling cancelled.','AbortError');
+        done++;
+        $('upscale-status').textContent='AI enhancing image… '+Math.round(done/total*100)+'% · '+done+' / '+total+' tiles · '+backend;
         const tileCanvas=await upscaleTile(session,ort,sourceCanvas,x,y,tileW,tileH);
+        if(upscalerCancelRequested){tileCanvas.width=0;tileCanvas.height=0;throw new DOMException('Upscaling cancelled.','AbortError');}
+        const modelScale=Number(tileCanvas.dataset.modelScale)||4;
         const cropL=x>0?overlap:0,cropT=y>0?overlap:0;
         const cropR=x+tileW<width?overlap:0,cropB=y+tileH<height?overlap:0;
         const keepW=tileW-cropL-cropR,keepH=tileH-cropT-cropB;
-        outputCtx.drawImage(tileCanvas,cropL*4,cropT*4,keepW*4,keepH*4,(x+cropL)*scale,(y+cropT)*scale,keepW*scale,keepH*scale);
+        outputCtx.drawImage(tileCanvas,cropL*modelScale,cropT*modelScale,keepW*modelScale,keepH*modelScale,(x+cropL)*scale,(y+cropT)*scale,keepW*scale,keepH*scale);
         tileCanvas.width=0;tileCanvas.height=0;
         await new Promise(resolve=>setTimeout(resolve,0));
         if(x+tileSize>=width)break;
@@ -936,7 +947,7 @@
   $('upscale-run').addEventListener('click',async()=>{
     const index=currentEditorIndex,state=imageStates[index],file=selectedFiles[index];
     if(!file||!state||upscalerBusy)return;
-    upscalerBusy=true;$('upscale-run').disabled=true;$('upscale-download').disabled=true;
+    upscalerBusy=true;upscalerCancelRequested=false;$('upscale-run').disabled=true;$('upscale-cancel').disabled=false;$('upscale-download').disabled=true;
     $('review-approved').checked=false;$('upload-btn').disabled=true;
     clearUpscaleResult(state);
     let sourceBitmap=null,adjustedFile=null,resultCanvas=null;
@@ -959,13 +970,19 @@
       $('upscale-status').textContent='Upscaling complete using '+result.backend+'. The enhanced image is ready for review and can be included when publishing.';
       $('upscale-download').disabled=false;
     }catch(error){
-      $('upscale-status').textContent='Upscaling could not complete: '+(error?.message||String(error));
+      $('upscale-status').textContent=error?.name==='AbortError'?'Upscaling cancelled. Your original image is unchanged.':'Upscaling could not complete: '+(error?.message||String(error));
       log('AI upscaler: '+(error?.message||error),'error');
     }finally{
       sourceBitmap?.close?.();if(resultCanvas){resultCanvas.width=0;resultCanvas.height=0;}
-      upscalerBusy=false;$('upscale-run').disabled=!selectedFiles[index];$('upscale-download').disabled=!imageStates[index]?.upscaledBlob;
-      refreshUpscalerPanel(index);
+      upscalerBusy=false;upscalerCancelRequested=false;$('upscale-cancel').disabled=true;$('upscale-run').disabled=!selectedFiles[currentEditorIndex];$('upscale-download').disabled=!imageStates[currentEditorIndex]?.upscaledBlob;
+      refreshUpscalerPanel(currentEditorIndex);
     }
+  });
+  $('upscale-cancel').addEventListener('click',()=>{
+    if(!upscalerBusy)return;
+    upscalerCancelRequested=true;
+    $('upscale-cancel').disabled=true;
+    $('upscale-status').textContent='Cancelling after the current tile finishes…';
   });
   $('upscale-download').addEventListener('click',()=>{
     const state=imageStates[currentEditorIndex];if(!state?.upscaledBlob)return;
