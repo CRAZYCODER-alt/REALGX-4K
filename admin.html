@@ -256,7 +256,7 @@
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
     $('analysis-details').innerHTML='';
     const lines=['Dimensions: '+a.width+' × '+a.height+'px','Aspect ratio: '+a.ratio,'Detected type: '+a.kind,'Resolution: '+a.quality,'EXIF orientation: '+a.orientation,a.review];
-    if(orientationCheck?.method)lines.push('Analysis method: '+(orientationCheck.method==='rotation-model'?'Dedicated on-device rotation classifier':orientationCheck.method==='vision'?'Legacy whole-image vision model':orientationCheck.method==='ocr'?'On-device text recognition':'Face landmark detection'));
+    if(orientationCheck?.method)lines.push('Analysis method: '+(orientationCheck.method==='rotation-model'?'Dedicated on-device rotation classifier':orientationCheck.method==='vision'?'Legacy whole-image vision model':orientationCheck.method==='ocr-mirror'?'On-device text and mirror analysis':orientationCheck.method==='ocr'?'On-device text recognition':'Face landmark detection'));
     if(orientationCheck)lines.push('AI orientation: '+orientationCheck.message);
     if(orientationCheck?.candidates?.length)lines.push('Orientation scores: '+orientationCheck.candidates.map(c=>c.angle+'° '+Math.round((c.confidence||0)*100)+'%').join(' · '));
     if(a.subjectFocus)lines.push('Detected subject focus: '+Math.round(a.subjectFocus.x*100)+'% horizontal, '+Math.round(a.subjectFocus.y*100)+'% vertical');
