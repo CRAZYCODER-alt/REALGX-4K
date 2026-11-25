@@ -31,6 +31,12 @@ Public authentication screen at [`/admin`](https://realgx.vercel.app/admin) for 
 
 ![REALGX 4K admin login page](screenshots/realgx-admin.webp)
 
+### Private Upload Dashboard
+
+Authenticated admin view at [`/admin`](https://realgx.vercel.app/admin), showing bulk wallpaper publishing controls, the on-device Wallpaper Intelligence & Studio editor, and the published wallpapers management grid.
+
+![REALGX 4K private admin upload dashboard](screenshots/realgx-admin-dashboard.webp)
+
 ## Technology
 
 - HTML, CSS and vanilla JavaScript.
