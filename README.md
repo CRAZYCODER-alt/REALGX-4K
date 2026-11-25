@@ -17,6 +17,20 @@ A responsive wallpaper gallery for desktop and mobile, with a Supabase-backed ca
 - Admin publishing flow with multiple-image import and image review.
 - ImgBB image hosting through a Supabase Edge Function; the ImgBB API key stays server-side.
 
+## Screenshots
+
+### Public Wallpaper Gallery
+
+Full-page desktop view of the live gallery at [`https://realgx.vercel.app`](https://realgx.vercel.app), showing the featured spotlight, search and category filters, read-only creator studio notice, wallpaper grid, and 4K setup guide.
+
+![REALGX 4K public wallpaper gallery](screenshots/realgx-gallery.webp)
+
+### Admin Sign-In Page
+
+Public authentication screen at [`/admin`](https://realgx.vercel.app/admin) for the protected admin upload dashboard.
+
+![REALGX 4K admin login page](screenshots/realgx-admin.webp)
+
 ## Technology
 
 - HTML, CSS and vanilla JavaScript.
