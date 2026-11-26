@@ -840,7 +840,7 @@
     $("metadata-ai-status").textContent="Analysing image…";
     try{
       const metadata=await generateMetadataForImage(file,index);
-      renderEditor();$("metadata-ai-status").textContent=metadata.metadataSource==="fallback"?"Fallback generated · review fields":"Gemini generated · review fields";
+      renderEditor();$("metadata-ai-status").textContent=metadata.metadataSource==="openrouter"?"OpenRouter generated · review fields":"Gemini generated · review fields";
       $("review-approved").checked=false;$("upload-btn").disabled=true;
       log((metadata.metadataSource==="openrouter"?"OpenRouter":"Gemini")+" generated metadata for "+file.name+" using "+(metadata.metadataModel||"the selected model")+". Review or edit it before publishing.","success");
     }catch(error){$("metadata-ai-status").textContent="Generation failed";log(file.name+": "+(error?.message||error),"error");}
@@ -853,7 +853,7 @@
     let completed=0,failed=0;progress(0,selectedFiles.length,"Generating AI metadata…");
     for(let i=0;i<selectedFiles.length;i++){
       const file=selectedFiles[i];$("metadata-ai-status").textContent="Analysing "+(i+1)+" / "+selectedFiles.length;
-      try{const metadata=await generateMetadataForImage(file,i);completed++;log((metadata.metadataSource==="openrouter"?"OpenRouter metadata ready: ":"Gemini metadata ready: ")+file.name+" ("+(metadata.metadataModel||"model")+ ")"),"success");}
+      try{const metadata=await generateMetadataForImage(file,i);completed++;log((metadata.metadataSource==="openrouter"?"OpenRouter metadata ready: ":"Gemini metadata ready: ")+file.name+" ("+(metadata.metadataModel||"model")+")","success");}
       catch(error){failed++;log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");}
       progress(i+1,selectedFiles.length,"AI metadata "+(i+1)+" / "+selectedFiles.length);
       if(i===currentEditorIndex)renderEditor();
