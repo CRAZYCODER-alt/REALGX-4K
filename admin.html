@@ -824,11 +824,11 @@
     if(!mime)throw new Error("Unsupported image type for AI analysis.");
     const {data:{session}}=await supabaseClient.auth.getSession();
     if(!session?.access_token)throw new Error("Your admin session has expired. Sign in again.");
+    const analysisImage=await prepareImageForAI(file);
     const response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
       method:"POST",
       headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+session.access_token},
-      const analysisImage=await prepareImageForAI(file);
-    body:JSON.stringify({fileName:file.name,contentType:analysisImage.contentType,imageBase64:await fileToBase64(analysisImage.blob),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"})
+      body:JSON.stringify({fileName:file.name,contentType:analysisImage.contentType,imageBase64:await fileToBase64(analysisImage.blob),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"})
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.success||!result.metadata)throw new Error(result.error||"Both AI providers failed (HTTP "+response.status+").");
