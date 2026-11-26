@@ -804,24 +804,72 @@
     const ext=(file.name.match(/\.([^.]+)$/)||[])[1]?.toLowerCase();
     return ({jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif"})[ext]||"";
   }
-  async function generateMetadataForImage(file,index){
-    const mime=inferImageMime(file);
-    if(!mime)throw new Error("AI metadata supports JPEG, PNG, WEBP and GIF images. You can still enter metadata manually.");
-    if(file.size>3*1024*1024)throw new Error("Image exceeds the 3 MB AI analysis limit.");
-    const {data:{session}}=await supabaseClient.auth.getSession();
-    if(!session?.access_token)throw new Error("Your admin session has expired. Sign in again.");
-    const response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":`Bearer ${session.access_token}`},
-      body:JSON.stringify({fileName:file.name,contentType:mime,imageBase64:await fileToBase64(file)})
-    });
-    const result=await response.json().catch(()=>({}));
-    if(!response.ok||!result.success||!result.metadata)throw new Error(result.error||`AI metadata failed (HTTP ${response.status}).`);
-    const metadata=result.metadata;
-    imageStates[index].title=String(metadata.title||"").slice(0,120);
-    imageStates[index].description=String(metadata.description||"").slice(0,1000);
-    imageStates[index].category=["Gaming","Nature","Anime","Cyberpunk","Minimalist","Cars"].includes(metadata.category)?metadata.category:"Minimalist";
+  async function generateFallbackMetadata(file,index,reason){
+    const cleanName=file.name.replace(/\.[^.]+$/,"").replace(/[_-]+/g," ").replace(/\bIMG ?\d{6,}\b/ig,"").replace(/\bWA\d+\b/ig,"").replace(/\s+/g," ").trim();
+    const words=cleanName.split(" ").filter(Boolean);
+    const readable=words.length?words.map(w=>w.length<=3?w.toUpperCase():w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" "):"Untitled Wallpaper";
+    let width=0,height=0,palette=[];
+    try{
+      const objectUrl=URL.createObjectURL(file);
+      const image=new Image();
+      await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=objectUrl;});
+      width=image.naturalWidth;height=image.naturalHeight;
+      const canvas=document.createElement("canvas");canvas.width=32;canvas.height=32;
+      const ctx=canvas.getContext("2d",{willReadFrequently:true});
+      ctx.drawImage(image,0,0,32,32);
+      const pixels=ctx.getImageData(0,0,32,32).data;
+      const bins={};
+      for(let p=0;p<pixels.length;p+=16){
+        const r=Math.round(pixels[p]/64)*64,g=Math.round(pixels[p+1]/64)*64,b=Math.round(pixels[p+2]/64)*64;
+        const key=[r,g,b].join(",");
+        bins[key]=(bins[key]||0)+1;
+      }
+      palette=Object.entries(bins).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([key])=>{
+        const [r,g,b]=key.split(",").map(Number);
+        if(Math.max(r,g,b)-Math.min(r,g,b)<35)return r<80?"dark tones":r>190?"light tones":"neutral tones";
+        return r>g*1.25&&r>b*1.2?"warm red tones":b>r*1.2&&b>g*1.05?"cool blue tones":g>r*1.15&&g>b*1.05?"green tones":r>180&&g>120&&b<100?"golden tones":"vibrant mixed colours";
+      });
+      URL.revokeObjectURL(objectUrl);
+    }catch(error){console.warn("REALGX fallback image inspection:",error);}
+    const lower=(file.name+" "+cleanName).toLowerCase();
+    const category=/(car|bmw|audi|porsche|vehicle|auto)/.test(lower)?"Cars":/(anime|manga|naruto|one piece|ghibli)/.test(lower)?"Anime":/(game|gaming|valorant|minecraft|fortnite)/.test(lower)?"Gaming":/(cyber|neon|synthwave|futur)/.test(lower)?"Cyberpunk":/(nature|forest|mountain|ocean|flower|tree|sky|landscape)/.test(lower)?"Nature":"Minimalist";
+    const title=readable.slice(0,110);
+    const dimensions=width&&height?" An image resolution of "+width+" × "+height+" pixels.":"";
+    const colours=palette.length?" Its sampled palette includes "+[...new Set(palette)].join(", ")+".":"";
+    const description="A "+category.toLowerCase()+" wallpaper titled \""+title+"\". This fallback description is based on the file name and basic image properties, not AI scene recognition."+dimensions+colours;
+    imageStates[index].title=title;
+    imageStates[index].description=description.slice(0,1000);
+    imageStates[index].category=category;
+    imageStates[index].metadataSource="fallback";
+    imageStates[index].metadataNote=reason||"Gemini unavailable";
     return imageStates[index];
+  }
+  async function generateMetadataForImage(file,index){
+    try{
+      const mime=inferImageMime(file);
+      if(!mime)throw new Error("Unsupported image type for Gemini.");
+      if(file.size>3*1024*1024)throw new Error("Image exceeds the 3 MB Gemini analysis limit.");
+      const {data:{session}}=await supabaseClient.auth.getSession();
+      if(!session?.access_token)throw new Error("Your admin session has expired. Sign in again.");
+      const response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+session.access_token},
+        body:JSON.stringify({fileName:file.name,contentType:mime,imageBase64:await fileToBase64(file)})
+      });
+      const result=await response.json().catch(()=>({}));
+      if(!response.ok||!result.success||!result.metadata)throw new Error(result.error||"Gemini failed (HTTP "+response.status+").");
+      const metadata=result.metadata;
+      imageStates[index].title=String(metadata.title||"").slice(0,120);
+      imageStates[index].description=String(metadata.description||"").slice(0,1000);
+      imageStates[index].category=["Gaming","Nature","Anime","Cyberpunk","Minimalist","Cars"].includes(metadata.category)?metadata.category:"Minimalist";
+      imageStates[index].metadataSource="gemini";
+      imageStates[index].metadataNote="";
+      return {...imageStates[index],metadataSource:"gemini"};
+    }catch(error){
+      const reason=error?.message||"Gemini unavailable";
+      const state=await generateFallbackMetadata(file,index,reason);
+      return {...state,metadataSource:"fallback"};
+    }
   }
   let aiBatchRunning=false;
   async function generateCurrentMetadata(){
@@ -830,8 +878,8 @@
     aiBatchRunning=true;$("ai-generate-current").disabled=true;$("ai-generate-all").disabled=true;
     $("metadata-ai-status").textContent="Analysing image…";
     try{
-      await generateMetadataForImage(file,index);
-      renderEditor();$("metadata-ai-status").textContent="Generated · review fields";
+      const metadata=await generateMetadataForImage(file,index);
+      renderEditor();$("metadata-ai-status").textContent=metadata.metadataSource==="fallback"?"Fallback generated · review fields":"Gemini generated · review fields";
       $("review-approved").checked=false;$("upload-btn").disabled=true;
       log("Gemini generated metadata for "+file.name+". Review or edit it before publishing.","success");
     }catch(error){$("metadata-ai-status").textContent="Generation failed";log(file.name+": "+(error?.message||error),"error");}
@@ -844,7 +892,7 @@
     let completed=0,failed=0;progress(0,selectedFiles.length,"Generating AI metadata…");
     for(let i=0;i<selectedFiles.length;i++){
       const file=selectedFiles[i];$("metadata-ai-status").textContent="Analysing "+(i+1)+" / "+selectedFiles.length;
-      try{await generateMetadataForImage(file,i);completed++;log("AI metadata ready: "+file.name,"success");}
+      try{const metadata=await generateMetadataForImage(file,i);completed++;log((metadata.metadataSource==="fallback"?"Fallback metadata created: ":"Gemini metadata ready: ")+file.name+(metadata.metadataSource==="fallback"?" ("+metadata.metadataNote+")":""),metadata.metadataSource==="fallback"?"error":"success");}
       catch(error){failed++;log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");}
       progress(i+1,selectedFiles.length,"AI metadata "+(i+1)+" / "+selectedFiles.length);
       if(i===currentEditorIndex)renderEditor();
