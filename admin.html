@@ -804,16 +804,31 @@
     const ext=(file.name.match(/\.([^.]+)$/)||[])[1]?.toLowerCase();
     return ({jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif"})[ext]||"";
   }
+  async function prepareImageForAI(file){
+    const bitmap=await createImageBitmap(file);
+    const maxSide=1280;
+    const scale=Math.min(1,maxSide/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const ctx=canvas.getContext("2d",{alpha:false});
+    ctx.fillStyle="#111827";ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close?.();
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("Could not prepare image for AI analysis.")),"image/jpeg",0.78));
+    if(blob.size>2_000_000)throw new Error("Compressed AI preview is still too large. Please use a smaller image.");
+    return {blob,contentType:"image/jpeg"};
+  }
   async function generateMetadataForImage(file,index){
     const mime=inferImageMime(file);
     if(!mime)throw new Error("Unsupported image type for AI analysis.");
-    if(file.size>3*1024*1024)throw new Error("Image exceeds the 3 MB AI analysis limit.");
     const {data:{session}}=await supabaseClient.auth.getSession();
     if(!session?.access_token)throw new Error("Your admin session has expired. Sign in again.");
     const response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
       method:"POST",
       headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+session.access_token},
-      body:JSON.stringify({fileName:file.name,contentType:mime,imageBase64:await fileToBase64(file),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"})
+      const analysisImage=await prepareImageForAI(file);
+    body:JSON.stringify({fileName:file.name,contentType:analysisImage.contentType,imageBase64:await fileToBase64(analysisImage.blob),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"})
     });
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.success||!result.metadata)throw new Error(result.error||"Both AI providers failed (HTTP "+response.status+").");
@@ -850,17 +865,35 @@
     if(aiBatchRunning||!selectedFiles.length)return;
     aiBatchRunning=true;$("ai-generate-current").disabled=true;$("ai-generate-all").disabled=true;
     $("review-approved").checked=false;$("upload-btn").disabled=true;
-    let completed=0,failed=0;progress(0,selectedFiles.length,"Generating AI metadata…");
-    for(let i=0;i<selectedFiles.length;i++){
-      const file=selectedFiles[i];$("metadata-ai-status").textContent="Analysing "+(i+1)+" / "+selectedFiles.length;
-      try{const metadata=await generateMetadataForImage(file,i);completed++;log((metadata.metadataSource==="openrouter"?"OpenRouter metadata ready: ":"Gemini metadata ready: ")+file.name+" ("+(metadata.metadataModel||"model")+")","success");}
-      catch(error){failed++;log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");}
-      progress(i+1,selectedFiles.length,"AI metadata "+(i+1)+" / "+selectedFiles.length);
-      if(i===currentEditorIndex)renderEditor();
+    let completed=0,failed=0,nextIndex=0;
+    const total=selectedFiles.length;
+    progress(0,total,"Preparing parallel AI analysis…");
+    const worker=async()=>{
+      while(true){
+        const i=nextIndex++;
+        if(i>=total)return;
+        const file=selectedFiles[i];
+        $("metadata-ai-status").textContent="Analysing "+(i+1)+" / "+total+" (up to 3 at once)";
+        try{
+          const metadata=await generateMetadataForImage(file,i);
+          completed++;
+          log((metadata.metadataSource==="openrouter"?"OpenRouter metadata ready: ":"Gemini metadata ready: ")+file.name+" ("+(metadata.metadataModel||"model")+")","success");
+        }catch(error){
+          failed++;
+          log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");
+        }finally{
+          progress(completed+failed,total,"AI metadata "+(completed+failed)+" / "+total+" · "+completed+" ready · "+failed+" failed");
+          if(i===currentEditorIndex)renderEditor();
+        }
+      }
+    };
+    try{
+      await Promise.all(Array.from({length:Math.min(3,total)},()=>worker()));
+      $("metadata-ai-status").textContent=completed+" generated · "+failed+" failed";
+      log("AI metadata batch finished: "+completed+" generated, "+failed+" failed. Failed entries need manual metadata; no placeholder descriptions were generated.",failed?"error":"success");
+    }finally{
+      aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;
     }
-    $("metadata-ai-status").textContent=completed+" generated · "+failed+" failed";
-    log("AI metadata batch finished: "+completed+" generated, "+failed+" failed. Failed entries need manual metadata; no placeholder descriptions were generated.",failed?"error":"success");
-    aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;
   }
   $("ai-generate-current").addEventListener("click",generateCurrentMetadata);
   $("ai-generate-all").addEventListener("click",generateAllMetadata);
