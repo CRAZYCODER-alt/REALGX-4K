@@ -650,9 +650,14 @@
     const entries=Object.values(archive.files).filter(entry=>!entry.dir&&!entry.name.split("/").some(part=>part==="__MACOSX"||part.startsWith("."))&&/\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(entry.name));
     if(!entries.length)throw new Error("No supported wallpaper images were found in this ZIP archive.");
     if(entries.length>100)throw new Error("This ZIP contains "+entries.length+" images. The current batch limit is 100 images; split it into smaller ZIP files.");
-    const extracted=[];let totalBytes=0,skippedLarge=0;
+    const extracted=[];let totalBytes=0,declaredBytes=0,skippedLarge=0;
     for(let i=0;i<entries.length;i++){
-      const entry=entries[i],blob=await entry.async("blob");
+      const entry=entries[i];
+      const declaredSize=Number(entry._data?.uncompressedSize||0);
+      if(declaredSize>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
+      declaredBytes+=declaredSize;
+      if(declaredBytes>200*1024*1024)throw new Error("ZIP declares more than 200 MB of extracted content; archive rejected.");
+      const blob=await entry.async("blob");
       totalBytes+=blob.size;
       if(totalBytes>200*1024*1024)throw new Error("Extracted content exceeds the 200 MB safety limit.");
       if(blob.size>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
