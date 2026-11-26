@@ -6,6 +6,7 @@
   <title>REALGX 4K — Private Admin</title>
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     body{background:#070913;color:#e2e8f0;font-family:Inter,ui-sans-serif,system-ui}
     .panel{background:#0d1224;border:1px solid #26334d}
@@ -62,7 +63,7 @@
           <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Select multiple images or add more images later. Every import is appended; existing images and edits stay in the queue.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="zip-import-btn" class="rounded-xl border border-emerald-500/50 bg-emerald-950/40 px-4 py-2.5 text-xs font-bold text-emerald-200 hover:bg-emerald-900/50">＋ Import ZIP archive</button><input id="zip-file" type="file" accept=".zip,application/zip" class="hidden"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Select one ZIP archive to extract its images in the browser, or add individual images. Extracted images are queued locally; only the ZIP requires browser file-selection approval.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
 
         <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Analyze each image and preview edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
@@ -71,7 +72,7 @@
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
             <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device</span></div><div id="analysis-details" class="analysis-details space-y-1 text-[11px] leading-snug text-slate-300"><p>Automatic rotation check. Mirror direction is not reliably detectable for every wallpaper; manual flip controls are in the toolbox below.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Check rotation</button><p class="text-[10px] leading-snug text-slate-500">Use the rotation and flip controls below to correct the image manually. Review the preview before publishing.</p></div>
-              <div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button></div>
+              <div class="rounded-xl border border-cyan-500/30 bg-slate-900/70 p-3 space-y-2"><p class="text-xs font-bold text-cyan-300">Metadata for this wallpaper</p><label class="block text-xs text-slate-300">Title<input id="editor-title" maxlength="120" class="field mt-1 w-full rounded-lg p-2" placeholder="Enter a descriptive title"></label><label class="block text-xs text-slate-300">Description<textarea id="editor-description" rows="3" maxlength="1000" class="field mt-1 w-full rounded-lg p-2 resize-y" placeholder="Describe the subject, colours and style"></textarea></label><p class="text-[10px] text-slate-500">These fields belong to the currently selected image and are saved with its upload.</p></div><div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button></div>
                 <div class="grid grid-cols-2 gap-2"><button type="button" id="flip-x-quick" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y-quick" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -137,7 +138,8 @@
       ? selectedFiles.map(f => `${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join(' · ')
       : 'No files selected';
   }
-  function defaultImageState(){return {rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null};}
+  function titleFromFilename(name){return String(name||"Wallpaper").replace(/\.[^.]+$/,"").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,c=>c.toUpperCase())||"Untitled Wallpaper";}
+  function defaultImageState(file=null){return {title:file?titleFromFilename(file.name):"",description:"",rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null};}
   function isSupportedImage(file){
     return !!file && (file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(file.name||''));
   }
@@ -156,7 +158,7 @@
       existing.add(key);return true;
     });
     const firstNewIndex=selectedFiles.length;
-    additions.forEach(file=>{selectedFiles.push(file);imageStates.push(defaultImageState());imageBitmaps.push(null);});
+    additions.forEach(file=>{selectedFiles.push(file);imageStates.push(defaultImageState(file));imageBitmaps.push(null);});
     if(rejected)log(rejected+' unsupported file(s) were skipped.','error');
     if(valid.length>additions.length)log((valid.length-additions.length)+' duplicate file(s) were skipped.','info');
     renderSelected();
@@ -254,6 +256,7 @@
     ctx.save();ctx.translate(stageW/2+state.x*stageW*.0035,stageH/2+state.y*stageH*.0035);
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
     ctx.drawImage(bitmap,-w*fit/2,-h*fit/2,w*fit,h*fit);ctx.restore();
+    $('editor-title').value=state.title||'';$('editor-description').value=state.description||'';
     const a=state.analysis,orientationCheck=a.orientationCheck;
     $('analysis-status').textContent=orientationRunningIndices.has(currentEditorIndex)?'AI analysing image…':orientationCheck?.status==='corrected'?'AI corrected · review image':orientationCheck?.status==='upright'?'AI check · upright':orientationCheck?.status==='review'?'Manual review recommended':orientationCheck?.status==='unavailable'?'AI unavailable · review':'Ready for AI analysis';
     $('editor-dimensions').textContent=a.width+' × '+a.height+'px · '+a.kind+' · '+a.quality;
@@ -588,6 +591,8 @@
   }
 
   function currentState(){return imageStates[currentEditorIndex];}
+  $('editor-title').addEventListener('input',e=>{const s=currentState();if(s)s.title=e.target.value;});
+  $('editor-description').addEventListener('input',e=>{const s=currentState();if(s)s.description=e.target.value;});
   function updateEditor(change){const s=currentState();if(!s)return;$('review-approved').checked=false;$('upload-btn').disabled=true;change(s);renderEditor();}
   $('upload-btn').disabled=true;
   $('review-approved').addEventListener('change',e=>{$('upload-btn').disabled=!e.target.checked;});
@@ -635,6 +640,41 @@
     }
     log('Removed '+removedName+' from the import queue.','success');
   });
+
+  async function extractZipArchive(file){
+    if(!file)return;
+    if(file.size>100*1024*1024)throw new Error("ZIP archive exceeds the 100 MB archive limit.");
+    if(!window.JSZip)throw new Error("ZIP extraction library did not load. Refresh the page and try again.");
+    log("Reading ZIP archive: "+file.name+"…");
+    const archive=await JSZip.loadAsync(file,{checkCRC32:true});
+    const entries=Object.values(archive.files).filter(entry=>!entry.dir&&!entry.name.split("/").some(part=>part==="__MACOSX"||part.startsWith("."))&&/\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(entry.name));
+    if(!entries.length)throw new Error("No supported wallpaper images were found in this ZIP archive.");
+    if(entries.length>100)throw new Error("This ZIP contains "+entries.length+" images. The current batch limit is 100 images; split it into smaller ZIP files.");
+    const extracted=[];let totalBytes=0,skippedLarge=0;
+    for(let i=0;i<entries.length;i++){
+      const entry=entries[i],blob=await entry.async("blob");
+      totalBytes+=blob.size;
+      if(totalBytes>200*1024*1024)throw new Error("Extracted content exceeds the 200 MB safety limit.");
+      if(blob.size>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
+      const ext=(entry.name.match(/\.([^.]+)$/)||[])[1]?.toLowerCase()||"";
+      const mime={jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif",avif:"image/avif",bmp:"image/bmp",tif:"image/tiff",tiff:"image/tiff"}[ext];
+      if(!mime)continue;
+      const safeName=entry.name.replace(/\\/g,"/").split("/").filter(Boolean).join("__").slice(-180);
+      extracted.push(new File([blob],safeName,{type:mime,lastModified:Date.now()}));
+      progress(i+1,entries.length,"Extracting "+(i+1)+" / "+entries.length+" images…");
+    }
+    if(!extracted.length)throw new Error("No images within the 3 MB per-image limit could be extracted.");
+    await setFiles(extracted,true);
+    log("ZIP extraction complete: "+extracted.length+" image(s) added to the upload queue"+(skippedLarge?", "+skippedLarge+" oversized image(s) skipped":"")+".","success");
+  }
+  $("zip-import-btn").addEventListener("click",()=>$("zip-file").click());
+  $("zip-file").addEventListener("change",async e=>{
+    const file=e.currentTarget.files?.[0];e.currentTarget.value="";
+    if(!file)return;
+    try{await extractZipArchive(file);}
+    catch(error){log("ZIP import failed: "+(error?.message||error),"error");}
+  });
+
   $('bulk-import-btn').addEventListener('click',()=>$('bulk-files').click());
   $('bulk-files').addEventListener('change',e=>{
     const files=Array.from(e.currentTarget.files||[]);
@@ -653,7 +693,7 @@
   $('editor-zoom').addEventListener('input',e=>updateEditor(s=>s.zoom=Number(e.target.value)/100));
   $('editor-x').addEventListener('input',e=>updateEditor(s=>s.x=Number(e.target.value)));
   $('editor-y').addEventListener('input',e=>updateEditor(s=>s.y=Number(e.target.value)));
-  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;$('review-approved').checked=false;$('upload-btn').disabled=true;const orientation=s.exifOrientation,analysis=s.analysis;Object.assign(s,defaultImageState(),{exifOrientation:orientation,analysis});renderEditor();});
+  $('editor-reset').addEventListener('click',()=>{const s=currentState();if(!s)return;$('review-approved').checked=false;$('upload-btn').disabled=true;const orientation=s.exifOrientation,analysis=s.analysis,title=s.title,description=s.description;Object.assign(s,defaultImageState(),{title,description,exifOrientation:orientation,analysis});renderEditor();});
   function editorChanged(s){return !!(s.rotation||s.flipX||s.flipY||s.zoom!==1||s.x||s.y||s.exifOrientation!==1);}
   async function canvasBlob(canvas,type){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not render adjusted image.')),type,/image\/jpeg|image\/webp/.test(type)?0.94:undefined));}
   async function getAdjustedFile(file,index){
@@ -760,16 +800,15 @@
     for (const file of selectedFiles) {
       try {
         log(`Uploading ${file.name}…`);
-        const originalUrls = await uploadToImgBB(file, file.name);
         const state = imageStates[done];
+        const originalUrls = await uploadToImgBB(file, file.name);
         const adjustedFile = await getAdjustedFile(file, done);
         const urls = adjustedFile === file ? originalUrls : await uploadToImgBB(adjustedFile, adjustedFile.name);
         const typedTitle = $('title').value.trim();
-        const title = (selectedFiles.length === 1 && typedTitle)
-          ? typedTitle
-          : file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const title = (selectedFiles.length === 1 && typedTitle) ? typedTitle : (state.title?.trim() || titleFromFilename(file.name));
+        const description = state.description?.trim() || $('description').value.trim();
         const { error } = await supabaseClient.from('wallpapers').insert({
-          title, description: $('description').value.trim(), category: $('category').value,
+          title, description, category: $('category').value,
           preview_url: urls.preview_url, full_url: urls.full_url,
           layout_settings: {
             original_url: originalUrls.full_url,
