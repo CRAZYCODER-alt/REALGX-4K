@@ -59,7 +59,7 @@ Deno.serve(async (req: Request) => {
       return reply(413, { success: false, error: "Image is too large for AI analysis. Use an image no larger than 3 MB." });
     }
 
-    const model = (Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash").trim();
+    const model = (Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash").trim();
     const prompt = `You are the metadata editor for REALGX 4K, a wallpaper gallery.
 Examine the supplied wallpaper image itself. Generate:
 - title: a distinctive, concise, natural title (about 3–8 words); do not mention resolution unless visible or supplied.
@@ -69,26 +69,31 @@ The original filename is: ${fileName.slice(0, 180)}.
 Return only data matching the requested JSON schema.`;
 
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": geminiApiKey,
+          "Api-Revision": "2026-05-20",
+        },
         signal: AbortSignal.timeout(45_000),
         body: JSON.stringify({
-          contents: [{ role: "user", parts: [
-            { text: prompt },
-            { inlineData: { mimeType: contentType.toLowerCase(), data: imageBase64 } },
-          ] }],
-          generationConfig: {
-            temperature: 0.35,
-            maxOutputTokens: 300,
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: "OBJECT",
+          model,
+          store: false,
+          input: [
+            { type: "text", text: prompt },
+            { type: "image", mime_type: contentType.toLowerCase(), data: imageBase64 },
+          ],
+          response_format: {
+            type: "text",
+            mime_type: "application/json",
+            schema: {
+              type: "object",
               properties: {
-                title: { type: "STRING" },
-                description: { type: "STRING" },
-                category: { type: "STRING", enum: [...categories] },
+                title: { type: "string" },
+                description: { type: "string" },
+                category: { type: "string", enum: [...categories] },
               },
               required: ["title", "description", "category"],
             },
@@ -108,7 +113,13 @@ Return only data matching the requested JSON schema.`;
       });
     }
 
-    const text = result?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("").trim();
+    const outputParts = (result?.steps || [])
+      .filter((step: { type?: string }) => step.type === "model_output")
+      .flatMap((step: { content?: Array<{ type?: string; text?: string }> }) => step.content || []);
+    const text = (result?.output_text || outputParts
+      .filter((part: { type?: string }) => part.type === "text")
+      .map((part: { text?: string }) => part.text || "")
+      .join("")).trim();
     if (!text) return reply(502, { success: false, error: "Gemini returned no metadata for this image." });
     let metadata: { title?: unknown; description?: unknown; category?: unknown };
     try { metadata = JSON.parse(text); }
