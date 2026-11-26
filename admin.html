@@ -848,12 +848,20 @@
     if(!title||/^(untitled|wallpaper|image|photo)$/i.test(title)||!description||!categories.includes(metadata.category)){
       throw new Error("AI returned incomplete or invalid metadata. Please retry or enter it manually.");
     }
-    imageStates[index].title=title.slice(0,120);
-    imageStates[index].description=description.slice(0,1000);
+    const appliedTitle=title.slice(0,120);
+    const appliedDescription=description.slice(0,1000);
+    imageStates[index].title=appliedTitle;
+    imageStates[index].description=appliedDescription;
     imageStates[index].category=metadata.category;
     imageStates[index].metadataSource=result.provider||"ai";
     imageStates[index].metadataNote="";
     imageStates[index].metadataModel=result.model||"";
+    // Update the visible editor immediately; do not rely on a later render cycle.
+    if(index===currentEditorIndex){
+      $("editor-title").value=appliedTitle;
+      $("editor-description").value=appliedDescription;
+      $("editor-category").value=metadata.category;
+    }
     return {...imageStates[index],metadataSource:result.provider||"ai",metadataModel:result.model||""};
   }
   let aiBatchRunning=false;
@@ -865,7 +873,7 @@
     $("metadata-ai-status").textContent="Analysing image…";
     try{
       const metadata=await generateMetadataForImage(file,index);
-      renderEditor();$("metadata-ai-status").textContent=metadata.metadataSource==="openrouter"?"OpenRouter generated · review fields":"Gemini generated · review fields";
+      renderEditor();$("editor-title").value=metadata.title||"";$("editor-description").value=metadata.description||"";$("editor-category").value=metadata.category||"";$("metadata-ai-status").textContent=metadata.metadataSource==="openrouter"?"OpenRouter generated · fields updated":"Gemini generated · fields updated";
       $("review-approved").checked=false;$("upload-btn").disabled=true;
       log((metadata.metadataSource==="openrouter"?"OpenRouter":"Gemini")+" generated metadata for "+file.name+" using "+(metadata.metadataModel||"the selected model")+". Review or edit it before publishing.","success");
     }catch(error){$("metadata-ai-status").textContent="Generation failed";log(file.name+": "+(error?.message||error),"error");}
@@ -892,7 +900,7 @@
           try{
             const metadata=await generateMetadataForImage(file,i);
             completed++;
-            log((metadata.metadataSource==="openrouter"?"OpenRouter metadata ready: ":"Gemini metadata ready: ")+file.name+" ("+(metadata.metadataModel||"model")+")","success");
+            log((metadata.metadataSource==="openrouter"?"OpenRouter":"Gemini")+" metadata applied to "+file.name+": “"+metadata.title+"” · description "+(metadata.description?"updated":"missing")+" · category "+metadata.category+" ("+(metadata.metadataModel||"model")+")","success");
           }catch(error){
             failed++;
             log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");
