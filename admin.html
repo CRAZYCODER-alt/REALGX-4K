@@ -157,8 +157,12 @@
       if(existing.has(key))return false;
       existing.add(key);return true;
     });
-    const firstNewIndex=selectedFiles.length;
-    additions.forEach(file=>{selectedFiles.push(file);imageStates.push(defaultImageState(file));imageBitmaps.push(null);});
+    const previouslySelectedFile=selectedFiles[currentEditorIndex]||null;
+    // Put the newest imported files at the top of the editor dropdown.
+    // Keep the image currently being edited selected when no new files arrive.
+    selectedFiles=[...additions,...selectedFiles];
+    imageStates=[...additions.map(file=>defaultImageState(file)),...imageStates];
+    imageBitmaps=[...additions.map(()=>null),...imageBitmaps];
     if(rejected)log(rejected+' unsupported file(s) were skipped.','error');
     if(valid.length>additions.length)log((valid.length-additions.length)+' duplicate file(s) were skipped.','info');
     renderSelected();
@@ -178,7 +182,8 @@
     select.disabled=false;
     $('delete-queued-image').disabled=false;
     $('editor-image-count').textContent=selectedFiles.length+' image'+(selectedFiles.length===1?'':'s');
-    const targetIndex=append&&firstNewIndex>0&&currentEditorIndex<selectedFiles.length?currentEditorIndex:Math.max(0,firstNewIndex);
+    const previousFileIndex=previouslySelectedFile?selectedFiles.indexOf(previouslySelectedFile):-1;
+    const targetIndex=additions.length?0:Math.max(0,previousFileIndex);
     currentEditorIndex=targetIndex;
     select.value=String(targetIndex);
     editorRenderToken++;
@@ -952,7 +957,7 @@
   async function loadWallpapers() {
     $('wallpaper-list').innerHTML = '<p class="text-xs text-slate-500">Loading…</p>';
     const { data, error } = await supabaseClient.from('wallpapers')
-      .select('id,title,description,category,preview_url,full_url,created_at').order('created_at', {ascending:false});
+      .select('id,title,description,category,preview_url,full_url,created_at').order('created_at', {ascending:false}).order('id', {ascending:false});
     if (error) { $('wallpaper-list').textContent = safeError(error); return; }
     if (!data.length) { $('wallpaper-list').innerHTML = '<p class="text-xs text-slate-500">No wallpapers published yet.</p>'; return; }
     $('wallpaper-list').innerHTML = '';
@@ -978,6 +983,14 @@
     });
   }
   $('refresh').addEventListener('click', loadWallpapers);
+
+  // Keep the published list in sync if another admin session publishes or removes a wallpaper.
+  const adminWallpaperChannel = supabaseClient
+    .channel('admin-wallpapers')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'wallpapers' }, () => {
+      loadWallpapers();
+    })
+    .subscribe();
 
   (async () => {
     const { data: { session } } = await supabaseClient.auth.getSession();

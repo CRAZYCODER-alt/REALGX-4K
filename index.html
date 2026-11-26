@@ -1183,7 +1183,8 @@
         const { data, error } = await supabaseClient
           .from('wallpapers')
           .select('id,title,description,category,preview_url,full_url,created_at,layout_settings')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false });
         if (error) throw error;
 
         userUploads = (data || []).map(row => ({
@@ -1484,7 +1485,10 @@
       }
 
       if (currentSort === 'newest') {
-        filtered.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+        filtered.sort((a, b) =>
+          ((b.dateAdded || 0) - (a.dateAdded || 0)) ||
+          ((Number(b.id) || 0) - (Number(a.id) || 0))
+        );
       } else if (currentSort === 'downloads') {
         filtered.sort((a, b) => parseInt(b.downloads.replace(/,/g, '')) - parseInt(a.downloads.replace(/,/g, '')));
       } else if (currentSort === 'title') {
