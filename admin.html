@@ -1213,6 +1213,12 @@
         const instruction = document.createElement('p');
         instruction.className = 'text-[11px] text-slate-400';
         instruction.textContent = 'Select only the extra listing(s) you want to remove. At least one copy must remain.';
+        const selectionControls = document.createElement('div');
+        selectionControls.className = 'flex flex-wrap items-center gap-2';
+        const selectAll = document.createElement('button');
+        selectAll.type = 'button';
+        selectAll.className = 'rounded-lg border border-sky-500/40 bg-sky-950/30 px-3 py-2 text-xs font-bold text-sky-200';
+        selectAll.textContent = 'Select all extra copies';
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'rounded-lg border border-rose-500/40 bg-rose-950/30 px-4 py-2 text-xs font-bold text-rose-200 disabled:opacity-40';
@@ -1220,7 +1226,16 @@
         const updateButton = () => {
           const count = checkboxes.filter(item => item.checkbox.checked).length;
           remove.disabled = count < 1 || count >= group.items.length;
+          selectAll.textContent = count === group.items.length - 1 ? 'Clear selection' : 'Select all extra copies';
         };
+        selectAll.addEventListener('click', () => {
+          const allExtrasSelected = checkboxes.filter(item => item.checkbox.checked).length === group.items.length - 1;
+          checkboxes.forEach((item, index) => {
+            // Keep the first entry as the retained copy; select every other exact duplicate.
+            item.checkbox.checked = !allExtrasSelected && index !== 0;
+          });
+          updateButton();
+        });
         checkboxes.forEach(item => item.checkbox.addEventListener('change', updateButton));
         updateButton();
         remove.addEventListener('click', async () => {
@@ -1240,7 +1255,8 @@
           await loadWallpapers();
           await scanExactDuplicates();
         });
-        actions.append(instruction, remove);
+        selectionControls.append(selectAll, remove);
+        actions.append(instruction, selectionControls);
         section.append(heading, grid, actions);
         results.append(section);
       });
