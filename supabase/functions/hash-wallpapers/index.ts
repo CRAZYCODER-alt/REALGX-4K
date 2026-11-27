@@ -151,6 +151,17 @@ Deno.serve(async (req: Request) => {
       return reply(400, { success: false, error: "One or more scan items are invalid." });
     }
 
+    // Forced mode is used only for files whose sizes matched across separate
+    // browser batches. Hash every supplied item so cross-batch duplicates are found.
+    if (payload?.forceHash === true) {
+      const hashes = await mapLimit(validItems, 6, hashOne);
+      return reply(200, {
+        success: true,
+        results: hashes,
+        stats: { checked: validItems.length, hashed: validItems.length, skippedByUniqueSize: 0 },
+      });
+    }
+
     // First pass: small HEAD requests in parallel.
     const inspections = await mapLimit(validItems, 16, inspectSize);
     const results = new Map<string, Record<string, unknown>>();
