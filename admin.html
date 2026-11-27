@@ -1078,41 +1078,42 @@
       }
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
-      const allResults = [];
-      const batchSize = 10;
-      for (let start = 0; start < rows.length; start += batchSize) {
-        const batch = rows.slice(start, start + batchSize);
-        status.textContent = 'Checking image bytes: ' + Math.min(start + batch.length, rows.length) + ' / ' + rows.length + '…';
-        const response = await fetch(SUPABASE_URL + '/functions/v1/hash-wallpapers', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': 'Bearer ' + session.access_token
-          },
-          body: JSON.stringify({ items: batch.map(row => ({ id: String(row.id), url: row.full_url })) })
-        });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok || !payload.success || !Array.isArray(payload.results)) {
-          throw new Error(payload.error || 'Image verification failed (HTTP ' + response.status + ').');
-        }
-        allResults.push(...payload.results);
+      status.textContent = 'Checking file sizes first, then hashing only possible matches…';
+      const response = await fetch(SUPABASE_URL + '/functions/v1/hash-wallpapers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + session.access_token
+        },
+        body: JSON.stringify({ items: rows.map(row => ({ id: String(row.id), url: row.full_url })) })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || !payload.success || !Array.isArray(payload.results)) {
+        throw new Error(payload.error || 'Image verification failed (HTTP ' + response.status + ').');
       }
 
-      const byId = new Map(allResults.map(item => [String(item.id), item]));
+      const byId = new Map(payload.results.map(item => [String(item.id), item]));
       const hashGroups = new Map();
       let verified = 0, unverified = skipped;
       rows.forEach(row => {
         const result = byId.get(String(row.id));
-        if (!result?.hash) { unverified++; return; }
-        verified++;
-        if (!hashGroups.has(result.hash)) hashGroups.set(result.hash, []);
-        hashGroups.get(result.hash).push(row);
+        if (result?.hash) {
+          verified++;
+          if (!hashGroups.has(result.hash)) hashGroups.set(result.hash, []);
+          hashGroups.get(result.hash).push(row);
+        } else if (result?.uniqueBySize) {
+          verified++;
+        } else {
+          unverified++;
+        }
       });
       const groups = Array.from(hashGroups.entries())
         .filter(([, items]) => items.length > 1)
         .map(([hash, items]) => ({ hash, items }));
-      status.textContent = 'Scan complete: ' + verified + ' verified · ' + unverified + ' unverified · ' + groups.length + ' exact-duplicate group(s).';
+      const hashedCount = Number(payload.stats?.hashed || 0);
+      const skippedBySize = Number(payload.stats?.skippedByUniqueSize || 0);
+      status.textContent = 'Scan complete: ' + verified + ' verified · ' + groups.length + ' exact-duplicate group(s). ' + hashedCount + ' file(s) hashed; ' + skippedBySize + ' skipped safely by unique file size · ' + unverified + ' unverified.';
       if (!groups.length) {
         results.innerHTML = '<p class="rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm text-emerald-300">No exact duplicate files were found among the images that could be verified.</p>';
         return;
