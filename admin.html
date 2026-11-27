@@ -15,6 +15,63 @@
     .drop-active{border-color:#22d3ee!important;background:#083344!important}
     .tool-btn{border:1px solid #334155;border-radius:.65rem;padding:.55rem .45rem;font-size:11px;font-weight:700;color:#dbeafe;background:#10182a}
     .tool-btn:hover{border-color:#22d3ee;background:#123047}\n    .analysis-details{max-height:116px;overflow:auto;padding-right:3px}\n    .analysis-details p{margin:0 0 3px}
+  
+    /* Responsive admin layout: every tool remains reachable on phones and tablets. */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-padding-top: 1rem; }
+    body { overflow-x: clip; }
+    main, header > div, #dashboard, #wallpaper-editor { min-width: 0; }
+    img, canvas, video { max-width: 100%; }
+    button, input, select, textarea { max-width: 100%; }
+    input:not([type="checkbox"]):not([type="range"]):not([type="file"]),
+    select, textarea { min-width: 0; }
+    button, a, input, select, textarea { touch-action: manipulation; }
+    .tool-btn { min-height: 42px; padding: .65rem .55rem; }
+    #editor-canvas { width: 100%; height: auto; }
+    #wallpaper-list, #duplicate-results { min-width: 0; }
+    #wallpaper-list > *, #duplicate-results > * { min-width: 0; }
+    #duplicate-results button { min-height: 40px; }
+    #dropzone { padding: clamp(1rem, 5vw, 2rem); overflow-wrap: anywhere; }
+    .analysis-details { max-height: 180px; }
+    @media (max-width: 640px) {
+      header > div { align-items: center; gap: .75rem; padding: .85rem 1rem; }
+      header h1 { font-size: clamp(1rem, 4.5vw, 1.35rem); line-height: 1.25; }
+      header #signout { flex-shrink: 0; min-height: 40px; }
+      main { padding: 1rem .75rem 2rem; }
+      #login-panel, #dashboard > .panel, #dashboard > section, #dashboard > div.panel { padding: 1rem; border-radius: 1rem; }
+      #dashboard { gap: 1rem; }
+      #dashboard .flex { min-width: 0; }
+      #dashboard .flex > * { min-width: 0; }
+      #wallpaper-editor { padding: .85rem; }
+      #wallpaper-editor .grid { grid-template-columns: minmax(0, 1fr); }
+      #wallpaper-editor .grid > * { min-width: 0; }
+      #editor-file-select { width: 100%; flex-basis: 100%; }
+      #delete-queued-image { flex: 1 1 auto; }
+      #editor-image-count { flex: 1 1 100%; }
+      #editor-canvas { min-height: 130px; }
+      #dropzone { min-height: 150px; }
+      #zip-import-btn, #bulk-import-btn { flex: 1 1 100%; min-height: 44px; }
+      #upload-btn { width: 100%; min-height: 48px; }
+      #progress-label { width: 100%; overflow-wrap: anywhere; }
+      #duplicate-manager > div:first-child { align-items: stretch; }
+      #scan-duplicates { width: 100%; min-height: 44px; }
+      #duplicate-results .flex { flex-wrap: wrap; }
+      #duplicate-results button { flex: 1 1 auto; }
+      #wallpaper-list { grid-template-columns: minmax(0, 1fr); }
+      #wallpaper-list article { min-width: 0; }
+      #wallpaper-list article img { max-height: 240px; object-fit: cover; }
+      .field { font-size: 16px; }
+      .tool-btn { min-height: 44px; }
+    }
+    @media (min-width: 641px) and (max-width: 900px) {
+      main { padding-left: 1rem; padding-right: 1rem; }
+      #wallpaper-editor > .grid { grid-template-columns: minmax(0, 1fr); }
+      #wallpaper-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+
   </style>
 </head>
 <body class="min-h-screen">
