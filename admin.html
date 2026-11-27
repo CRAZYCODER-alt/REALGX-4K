@@ -947,6 +947,7 @@
   let browserAIImportsPromise=null;
   let browserAIModelPromise=null;
   let browserAIModel=null;
+  let browserAIBackend=null;
   const BROWSER_AI_MODEL_ID="HuggingFaceTB/SmolVLM-256M-Instruct";
   async function getBrowserAIImports(){
     if(!browserAIImportsPromise){
@@ -981,21 +982,54 @@
     if(browserAIModel)return browserAIModel;
     if(!browserAIModelPromise){
       browserAIModelPromise=(async()=>{
+        const {transformersJS}=await getBrowserAIImports();
+        const initializeModel=async(device,dtype)=>{
+          const settings={isVisionModel:true,device};
+          if(dtype)settings.dtype=dtype;
+          const model=transformersJS(BROWSER_AI_MODEL_ID,settings);
+          const availability=await model.availability();
+          if(availability==="unavailable"){
+            throw new Error(device==="webgpu"
+              ?"WebGPU is unavailable on this browser or device."
+              :"The CPU/WASM backend is unavailable in this browser.");
+          }
+          $("browser-ai-status").textContent=device==="webgpu"
+            ?(availability==="downloadable"?"Preparing GPU model…":"Starting GPU model…")
+            :(availability==="downloadable"?"Downloading CPU/WASM model…":"Preparing CPU/WASM model…");
+          await model.createSessionWithProgress((event)=>{
+            const progressValue=typeof event==="number"?event:event?.progress;
+            if(typeof progressValue==="number"){
+              const pct=Math.max(0,Math.min(100,Math.round(progressValue*100)));
+              $("browser-ai-progress").style.width=pct+"%";
+              $("browser-ai-status").textContent=(device==="webgpu"?"GPU":"CPU/WASM")+" · "+pct+"%";
+            }
+          });
+          return model;
+        };
+
         $("browser-ai-status").textContent="Checking WebGPU…";
         $("browser-ai-download").disabled=true;
-        const {transformersJS}=await getBrowserAIImports();
-        const model=transformersJS(BROWSER_AI_MODEL_ID,{isVisionModel:true,device:"webgpu"});
-        const availability=await model.availability();
-        if(availability==="unavailable")throw new Error("This browser or device does not support the required WebGPU runtime. Try a supported Chromium browser or use cloud fallback.");
-        $("browser-ai-status").textContent=availability==="downloadable"?"Downloading model…":"Preparing model…";
-        await model.createSessionWithProgress(({progress})=>{
-          const pct=Math.max(0,Math.min(100,Math.round((progress||0)*100)));
-          $("browser-ai-progress").style.width=pct+"%";
-          $("browser-ai-status").textContent="Downloading · "+pct+"%";
-        });
+        let model=null;
+        try{
+          model=await initializeModel("webgpu");
+          browserAIBackend="WebGPU";
+        }catch(gpuError){
+          console.warn("REALGX browser AI: WebGPU unavailable; trying CPU/WASM.",gpuError);
+          $("browser-ai-status").textContent="GPU unavailable · switching to CPU/WASM…";
+          $("browser-ai-progress").style.width="0%";
+          try{
+            model=await initializeModel("cpu","q8");
+            browserAIBackend="CPU/WASM";
+          }catch(cpuError){
+            throw new Error(
+              "WebGPU could not start ("+(gpuError?.message||gpuError)+"). "+
+              "CPU/WASM fallback also failed ("+(cpuError?.message||cpuError)+")."
+            );
+          }
+        }
         browserAIModel=model;
         $("browser-ai-progress").style.width="100%";
-        $("browser-ai-status").textContent="Ready · cached in browser";
+        $("browser-ai-status").textContent="Ready · "+browserAIBackend+" · cached in browser";
         return model;
       })();
     }
