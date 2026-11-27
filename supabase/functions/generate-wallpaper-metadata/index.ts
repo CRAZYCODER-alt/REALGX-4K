@@ -158,41 +158,6 @@ async function callGroq(apiKey: string, model: string, prompt: string, contentTy
 }
 
 
-async function callHuggingFace(apiKey: string, model: string, prompt: string, contentType: string, imageBase64: string) {
-  const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    signal: AbortSignal.timeout(24_000),
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: 550,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are a precise visual metadata editor. Inspect the image itself, follow the category rules exactly, and return only valid JSON." },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt + "\nReturn a JSON object with title, description, and category." },
-            { type: "image_url", image_url: { url: `data:${contentType};base64,${imageBase64}` } },
-          ],
-        },
-      ],
-    }),
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(`Hugging Face HTTP ${response.status}: ${result?.error?.message || "request failed"}`);
-  const content = result?.choices?.[0]?.message?.content;
-  const text = typeof content === "string" ? content : Array.isArray(content)
-    ? content.map((part: { text?: string }) => part?.text || "").join("") : "";
-  if (!text.trim()) throw new Error("Hugging Face returned no metadata.");
-  const cleaned = text.trim().replace(/^\`\`\`(?:json)?\s*/i, "").replace(/\s*\`\`\`$/, "");
-  return validateMetadata(JSON.parse(cleaned));
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return reply(405, { success: false, error: "Method not allowed." });
@@ -223,8 +188,6 @@ Deno.serve(async (req: Request) => {
     const openRouterKey = Deno.env.get("OPENROUTER_API_KEY");
     const groqKey = Deno.env.get("GROQ_API_KEY");
     const groqModel = (Deno.env.get("GROQ_MODEL") || "qwen/qwen3.8-27b").trim();
-    const huggingFaceKey = Deno.env.get("HF_TOKEN");
-    const huggingFaceModel = (Deno.env.get("HF_MODEL") || "Qwen/Qwen3-VL-8B-Instruct:parasail").trim();
     const geminiModel = (Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash").trim();
     const requestedModel = typeof payload.openRouterModel === "string" ? payload.openRouterModel.trim() : "";
     const openRouterModel = allowedModels.includes(requestedModel) ? requestedModel :
@@ -271,19 +234,6 @@ Deno.serve(async (req: Request) => {
       failures.push("Groq API key is not configured (GROQ_API_KEY).");
     }
 
-
-    if (huggingFaceKey) {
-      try {
-        const metadata = await callHuggingFace(huggingFaceKey, huggingFaceModel, prompt, contentType.toLowerCase(), imageBase64);
-        return reply(200, { success: true, provider: "huggingface", model: huggingFaceModel, metadata, fallback: true });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Hugging Face failed";
-        console.error("REALGX Hugging Face metadata provider failed:", message);
-        failures.push(message);
-      }
-    } else {
-      failures.push("Hugging Face token is not configured (HF_TOKEN).");
-    }
 
     return reply(502, {
       success: false,
