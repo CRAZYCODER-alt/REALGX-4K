@@ -1183,6 +1183,7 @@
       const globalSelectionCount = document.createElement('span');
       globalSelectionCount.className = 'text-[11px] text-slate-300';
       const allGroupCheckboxes = [];
+      const groupSelectionUpdaters = [];
       const updateGlobalSelection = () => {
         const selectedCount = allGroupCheckboxes.filter(item => item.checkbox.checked).length;
         const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
@@ -1196,7 +1197,7 @@
           if (item.isExtra) item.checkbox.checked = !allSelected;
         });
         updateGlobalSelection();
-        results.querySelectorAll('[data-group-selection-update]').forEach(button => button.click());
+        groupSelectionUpdaters.forEach(updateGroup => updateGroup());
       });
       globalSelectionActions.append(globalSelectAll, globalSelectionCount);
       globalSelection.append(globalSelectionInfo, globalSelectionActions);
