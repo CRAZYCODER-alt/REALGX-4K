@@ -1184,27 +1184,32 @@
       globalSelectionCount.className = 'text-[11px] text-slate-300';
       const allGroupCheckboxes = [];
       const groupSelectionUpdaters = [];
-      const updateGlobalSelection = () => {
-        const selectedCount = allGroupCheckboxes.filter(item => item.checkbox.checked).length;
-        const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
-        globalSelectAll.textContent = selectedCount === totalExtras && totalExtras > 0 ? 'Clear all selections' : 'Select all duplicates';
-        globalSelectionCount.textContent = selectedCount + ' / ' + totalExtras + ' extra copies selected';
-        globalDeleteAll.disabled = totalExtras === 0;
-      };
+      let globalSelectAllWasUsed = false;
       const globalDeleteAll = document.createElement('button');
       globalDeleteAll.type = 'button';
-      globalDeleteAll.className = 'rounded-lg border border-rose-500/50 bg-rose-950/40 px-4 py-2 text-xs font-black text-rose-200 disabled:opacity-40';
+      globalDeleteAll.className = 'hidden rounded-lg border border-rose-500/50 bg-rose-950/40 px-4 py-2 text-xs font-black text-rose-200 disabled:opacity-40';
       globalDeleteAll.textContent = 'Delete all duplicates globally';
       globalDeleteAll.disabled = true;
       const globalDeleteStatus = document.createElement('span');
       globalDeleteStatus.className = 'text-[11px] text-slate-300';
-      const getGlobalExtraRows = () => allGroupCheckboxes.filter(item => item.isExtra).map(item => item.row);
+      const getGlobalExtraRows = () => allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).map(item => item.row);
+      const updateGlobalSelection = () => {
+        const selectedCount = allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).length;
+        const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
+        const allSelected = totalExtras > 0 && selectedCount === totalExtras;
+        globalSelectAll.textContent = allSelected ? 'Clear all selections' : 'Select all duplicates';
+        globalSelectionCount.textContent = selectedCount + ' / ' + totalExtras + ' extra copies selected';
+        globalDeleteAll.disabled = !allSelected;
+        if (!allSelected) globalSelectAllWasUsed = false;
+        globalDeleteAll.classList.toggle('hidden', !(globalSelectAllWasUsed && allSelected));
+      };
       globalSelectAll.addEventListener('click', () => {
         const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
-        const allSelected = allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).length === totalExtras;
+        const allSelected = totalExtras > 0 && allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).length === totalExtras;
         allGroupCheckboxes.forEach(item => {
           if (item.isExtra) item.checkbox.checked = !allSelected;
         });
+        globalSelectAllWasUsed = !allSelected;
         updateGlobalSelection();
         groupSelectionUpdaters.forEach(updateGroup => updateGroup());
       });
