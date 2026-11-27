@@ -1270,17 +1270,13 @@
             item.checkbox.checked = !allExtrasSelected && index !== 0;
           });
           updateButton();
+          updateGlobalSelection();
         });
         checkboxes.forEach(item => item.checkbox.addEventListener('change', () => {
           updateButton();
           updateGlobalSelection();
         }));
-        const groupSelectionSync = document.createElement('button');
-        groupSelectionSync.type = 'button';
-        groupSelectionSync.hidden = true;
-        groupSelectionSync.dataset.groupSelectionUpdate = 'true';
-        groupSelectionSync.addEventListener('click', updateButton);
-        selectionControls.append(groupSelectionSync);
+        groupSelectionUpdaters.push(updateButton);
         updateButton();
         updateGlobalSelection();
         remove.addEventListener('click', async () => {
