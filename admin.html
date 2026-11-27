@@ -1189,7 +1189,16 @@
         const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
         globalSelectAll.textContent = selectedCount === totalExtras && totalExtras > 0 ? 'Clear all selections' : 'Select all duplicates';
         globalSelectionCount.textContent = selectedCount + ' / ' + totalExtras + ' extra copies selected';
+        globalDeleteAll.disabled = totalExtras === 0;
       };
+      const globalDeleteAll = document.createElement('button');
+      globalDeleteAll.type = 'button';
+      globalDeleteAll.className = 'rounded-lg border border-rose-500/50 bg-rose-950/40 px-4 py-2 text-xs font-black text-rose-200 disabled:opacity-40';
+      globalDeleteAll.textContent = 'Delete all duplicates globally';
+      globalDeleteAll.disabled = true;
+      const globalDeleteStatus = document.createElement('span');
+      globalDeleteStatus.className = 'text-[11px] text-slate-300';
+      const getGlobalExtraRows = () => allGroupCheckboxes.filter(item => item.isExtra).map(item => item.row);
       globalSelectAll.addEventListener('click', () => {
         const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
         const allSelected = allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).length === totalExtras;
@@ -1199,7 +1208,32 @@
         updateGlobalSelection();
         groupSelectionUpdaters.forEach(updateGroup => updateGroup());
       });
-      globalSelectionActions.append(globalSelectAll, globalSelectionCount);
+      globalDeleteAll.addEventListener('click', async () => {
+        const extras = getGlobalExtraRows();
+        if (!extras.length || globalDeleteAll.disabled) return;
+        const confirmed = confirm(
+          'Delete all ' + extras.length + ' extra duplicate listing(s) across every group from the REALGX gallery?\\n\\n' +
+          'One copy in each duplicate group will be kept.\\n\\n' +
+          'This removes gallery database records only. The hosted ImgBB image files will remain online. This action cannot be undone from this panel.'
+        );
+        if (!confirmed) return;
+        globalDeleteAll.disabled = true;
+        globalSelectAll.disabled = true;
+        globalDeleteAll.textContent = 'Deleting duplicates…';
+        let removed = 0;
+        const failures = [];
+        for (const row of extras) {
+          const { error } = await supabaseClient.from('wallpapers').delete().eq('id', row.id);
+          if (error) failures.push({ row, error });
+          else removed++;
+        }
+        if (removed) log('Globally removed ' + removed + ' duplicate gallery listing(s). Their ImgBB files remain hosted.', 'success');
+        failures.forEach(({ row, error }) => log('Could not remove duplicate listing ' + row.id + ': ' + safeError(error), 'error'));
+        globalDeleteStatus.textContent = removed + ' removed · ' + failures.length + ' failed';
+        await loadWallpapers();
+        await scanExactDuplicates();
+      });
+      globalSelectionActions.append(globalSelectAll, globalDeleteAll, globalSelectionCount, globalDeleteStatus);
       globalSelection.append(globalSelectionInfo, globalSelectionActions);
       results.append(globalSelection);
 
