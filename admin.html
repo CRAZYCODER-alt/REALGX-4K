@@ -90,6 +90,19 @@
         <div id="upload-log" class="mt-4 space-y-2 text-xs" aria-live="polite"></div>
       </div>
 
+      <section id="duplicate-manager" class="panel rounded-2xl p-5 sm:p-7">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-black">Find Exact Duplicates</h2>
+            <p class="text-xs text-slate-400 mt-1">Checks the actual image-file bytes using SHA-256. Similar-looking images, resized copies and re-encoded files are not marked as duplicates.</p>
+          </div>
+          <button type="button" id="scan-duplicates" class="w-full sm:w-auto rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-3 text-xs font-black text-cyan-200 hover:bg-cyan-900/50">⌕ Scan exact duplicates</button>
+        </div>
+        <p id="duplicate-status" class="mt-3 text-xs text-slate-400" role="status" aria-live="polite">No scan has been run yet.</p>
+        <div id="duplicate-results" class="mt-4 space-y-4"></div>
+        <p class="mt-4 text-[11px] leading-relaxed text-slate-500">Nothing is selected automatically. Choose which extra gallery entries to remove and keep at least one copy in every group. Removing a listing does not delete its hosted ImgBB image.</p>
+      </section>
+
       <div class="panel rounded-2xl p-5 sm:p-7">
         <div class="flex items-center justify-between gap-3 mb-4"><div><h2 class="text-lg font-black">Published wallpapers</h2><p class="text-xs text-slate-400">Delete removes the gallery record. It does not delete the file from ImgBB.</p></div><button id="refresh" class="text-xs border border-slate-700 rounded-lg px-3 py-2 hover:bg-slate-800">Refresh</button></div>
         <div id="wallpaper-list" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"><p class="text-xs text-slate-500">Loading…</p></div>
@@ -109,6 +122,8 @@
   let imageStates = [];
   let imageBitmaps = [];
   let currentEditorIndex = 0;
+  let publishedWallpapers = [];
+
   const orientationRunningFiles = new Set();
   let editorRenderToken = 0;
   let faceDetectorPromise = null;
@@ -1020,6 +1035,7 @@
     const { data, error } = await supabaseClient.from('wallpapers')
       .select('id,title,description,category,preview_url,full_url,created_at').order('created_at', {ascending:false}).order('id', {ascending:false});
     if (error) { $('wallpaper-list').textContent = safeError(error); return; }
+    publishedWallpapers = data || [];
     if (!data.length) { $('wallpaper-list').innerHTML = '<p class="text-xs text-slate-500">No wallpapers published yet.</p>'; return; }
     $('wallpaper-list').innerHTML = '';
     data.forEach(row => {
@@ -1043,6 +1059,160 @@
       body.append(del); card.append(img, body); $('wallpaper-list').append(card);
     });
   }
+
+  async function scanExactDuplicates() {
+    const button = $('scan-duplicates');
+    const status = $('duplicate-status');
+    const results = $('duplicate-results');
+    button.disabled = true;
+    button.textContent = 'Scanning…';
+    results.innerHTML = '';
+    status.textContent = 'Loading the published gallery…';
+    try {
+      await loadWallpapers();
+      const rows = publishedWallpapers.filter(row => row.full_url);
+      const skipped = publishedWallpapers.length - rows.length;
+      if (!rows.length) {
+        status.textContent = 'No published wallpapers with a full image URL are available to scan.';
+        return;
+      }
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
+      const allResults = [];
+      const batchSize = 10;
+      for (let start = 0; start < rows.length; start += batchSize) {
+        const batch = rows.slice(start, start + batchSize);
+        status.textContent = 'Checking image bytes: ' + Math.min(start + batch.length, rows.length) + ' / ' + rows.length + '…';
+        const response = await fetch(SUPABASE_URL + '/functions/v1/hash-wallpapers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': 'Bearer ' + session.access_token
+          },
+          body: JSON.stringify({ items: batch.map(row => ({ id: String(row.id), url: row.full_url })) })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload.success || !Array.isArray(payload.results)) {
+          throw new Error(payload.error || 'Image verification failed (HTTP ' + response.status + ').');
+        }
+        allResults.push(...payload.results);
+      }
+
+      const byId = new Map(allResults.map(item => [String(item.id), item]));
+      const hashGroups = new Map();
+      let verified = 0, unverified = skipped;
+      rows.forEach(row => {
+        const result = byId.get(String(row.id));
+        if (!result?.hash) { unverified++; return; }
+        verified++;
+        if (!hashGroups.has(result.hash)) hashGroups.set(result.hash, []);
+        hashGroups.get(result.hash).push(row);
+      });
+      const groups = Array.from(hashGroups.entries())
+        .filter(([, items]) => items.length > 1)
+        .map(([hash, items]) => ({ hash, items }));
+      status.textContent = 'Scan complete: ' + verified + ' verified · ' + unverified + ' unverified · ' + groups.length + ' exact-duplicate group(s).';
+      if (!groups.length) {
+        results.innerHTML = '<p class="rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm text-emerald-300">No exact duplicate files were found among the images that could be verified.</p>';
+        return;
+      }
+      groups.forEach((group, groupIndex) => {
+        const section = document.createElement('section');
+        section.className = 'rounded-xl border border-amber-500/30 bg-slate-950/60 p-3 sm:p-4 space-y-3';
+        const heading = document.createElement('div');
+        heading.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+        const title = document.createElement('p');
+        title.className = 'text-sm font-black text-amber-200';
+        title.textContent = 'Exact duplicate group ' + (groupIndex + 1) + ' · ' + group.items.length + ' copies';
+        const hashLabel = document.createElement('p');
+        hashLabel.className = 'text-[10px] text-slate-500 break-all';
+        hashLabel.textContent = 'SHA-256: ' + group.hash;
+        heading.append(title, hashLabel);
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
+        const checkboxes = [];
+        group.items.forEach(row => {
+          const label = document.createElement('label');
+          label.className = 'min-w-0 rounded-xl border border-slate-700 bg-slate-900/70 p-2 flex gap-3 cursor-pointer hover:border-cyan-500/50';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.className = 'mt-1 h-4 w-4 shrink-0 accent-rose-500';
+          checkbox.setAttribute('aria-label', 'Select ' + row.title + ' for gallery removal');
+          const content = document.createElement('div');
+          content.className = 'min-w-0 flex-1';
+          const image = document.createElement('img');
+          image.src = row.preview_url || row.full_url;
+          image.alt = row.title || 'Wallpaper preview';
+          image.loading = 'lazy';
+          image.className = 'w-full aspect-video object-cover rounded-lg bg-slate-800';
+          const name = document.createElement('p');
+          name.className = 'mt-2 text-xs font-bold text-slate-100 break-words';
+          name.textContent = row.title || 'Untitled wallpaper';
+          const id = document.createElement('p');
+          id.className = 'mt-1 text-[10px] text-slate-500';
+          id.textContent = 'Gallery ID: ' + row.id;
+          const hint = document.createElement('p');
+          hint.className = 'mt-2 text-[10px] text-rose-200';
+          hint.textContent = 'Select this listing only if you want to remove it.';
+          content.append(image, name, id, hint);
+          label.append(checkbox, content);
+          grid.append(label);
+          checkboxes.push({ checkbox, row });
+        });
+        const actions = document.createElement('div');
+        actions.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-800 pt-3';
+        const instruction = document.createElement('p');
+        instruction.className = 'text-[11px] text-slate-400';
+        instruction.textContent = 'Keep at least one copy. No image is selected by default.';
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.disabled = true;
+        remove.className = 'rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-rose-900/50';
+        remove.textContent = 'Remove selected gallery listings';
+        const updateButton = () => {
+          const selected = checkboxes.filter(item => item.checkbox.checked).length;
+          remove.disabled = selected === 0 || selected >= group.items.length;
+          remove.textContent = selected ? 'Remove ' + selected + ' selected listing(s)' : 'Remove selected gallery listings';
+          instruction.textContent = selected >= group.items.length
+            ? 'You must keep at least one copy in this group.'
+            : selected ? selected + ' selected · ' + (group.items.length - selected) + ' will remain.' : 'Keep at least one copy. No image is selected by default.';
+        };
+        checkboxes.forEach(item => item.checkbox.addEventListener('change', updateButton));
+        remove.addEventListener('click', async () => {
+          const selected = checkboxes.filter(item => item.checkbox.checked).map(item => item.row);
+          if (!selected.length || selected.length >= group.items.length) return;
+          const names = selected.map(row => '• ' + (row.title || 'Untitled') + ' (ID ' + row.id + ')').join('\n');
+          if (!confirm('Remove these ' + selected.length + ' listing(s) from the REALGX gallery?\n\n' + names + '\n\nThe hosted ImgBB image files will remain online. This cannot be undone from this panel.')) return;
+          remove.disabled = true;
+          remove.textContent = 'Removing…';
+          let removed = 0;
+          for (const row of selected) {
+            const { error } = await supabaseClient.from('wallpapers').delete().eq('id', row.id);
+            if (error) log('Could not remove duplicate listing ' + row.id + ': ' + safeError(error), 'error');
+            else removed++;
+          }
+          if (removed) log('Removed ' + removed + ' duplicate listing(s). Their ImgBB files remain hosted.', 'success');
+          await loadWallpapers();
+          await scanExactDuplicates();
+        });
+        actions.append(instruction, remove);
+        section.append(heading, grid, actions);
+        results.append(section);
+      });
+    } catch (error) {
+      status.textContent = 'Scan could not be completed.';
+      const message = document.createElement('p');
+      message.className = 'rounded-xl border border-rose-500/30 bg-rose-950/20 p-3 text-xs text-rose-200';
+      message.textContent = safeError(error);
+      results.append(message);
+    } finally {
+      button.disabled = false;
+      button.textContent = '⌕ Scan exact duplicates';
+    }
+  }
+  $('scan-duplicates').addEventListener('click', scanExactDuplicates);
+
   $('refresh').addEventListener('click', loadWallpapers);
 
   // Keep the published list in sync if another admin session publishes or removes a wallpaper.
