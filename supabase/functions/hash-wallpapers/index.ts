@@ -17,29 +17,27 @@ const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
 const ALLOWED_IMAGE_HOST = "i.ibb.co";
 
 async function hashOne(item: { id: string; url: string }) {
-  const parsed = new URL(item.url);
-  if (
-    parsed.protocol !== "https:" ||
-    parsed.hostname !== ALLOWED_IMAGE_HOST ||
-    parsed.port ||
-    parsed.username ||
-    parsed.password
-  ) {
-    return { id: item.id, error: "Image URL is not on the approved ImgBB image host." };
-  }
-
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
+    const parsed = new URL(item.url);
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.hostname !== ALLOWED_IMAGE_HOST ||
+      parsed.port ||
+      parsed.username ||
+      parsed.password
+    ) {
+      return { id: item.id, error: "Image URL is not on the approved ImgBB image host." };
+    }
     const response = await fetch(parsed.toString(), {
       method: "GET",
-      redirect: "follow",
+      redirect: "manual",
       signal: controller.signal,
       headers: { "Accept": "image/*" },
     });
-    const finalUrl = new URL(response.url);
-    if (!response.ok || finalUrl.protocol !== "https:" || finalUrl.hostname !== ALLOWED_IMAGE_HOST) {
-      return { id: item.id, error: "ImgBB image could not be fetched from the approved host." };
+    if (!response.ok || response.status >= 300) {
+      return { id: item.id, error: "ImgBB image could not be fetched directly from the approved host." };
     }
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.toLowerCase().startsWith("image/")) {
@@ -109,7 +107,15 @@ Deno.serve(async (req: Request) => {
       return reply(400, { success: false, error: "One or more scan items are invalid." });
     }
 
-    const results = await Promise.all(validItems.map((item: { id: string; url: string }) => hashOne(item)));
+    const results: Array<Record<string, unknown>> = [];
+    let next = 0;
+    const worker = async () => {
+      while (next < validItems.length) {
+        const item = validItems[next++];
+        results.push(await hashOne(item));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(2, validItems.length) }, () => worker()));
     return reply(200, { success: true, results });
   } catch (error) {
     console.error("REALGX exact duplicate scan failed:", error);
