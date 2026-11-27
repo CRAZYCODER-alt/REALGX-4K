@@ -211,25 +211,25 @@
     #realgx-intro {
       position: fixed; inset: 0; z-index: 99999; display: grid; place-items: center;
       overflow: hidden; background: #050711; opacity: 1;
-      transition: opacity .65s cubic-bezier(.22,1,.36,1);
+      transition: opacity .85s cubic-bezier(.22,1,.36,1);
     }
     #realgx-intro::before {
       content: ""; position: absolute; width: min(75vw, 620px); aspect-ratio: 1;
       border-radius: 50%; background: radial-gradient(circle, rgba(0,240,255,.13), rgba(168,85,247,.07) 42%, transparent 70%);
-      filter: blur(18px); animation: realgxIntroAura 2.6s ease-out both;
+      filter: blur(18px); animation: realgxIntroAura 4.2s ease-out both;
     }
     #realgx-intro.is-leaving { opacity: 0; pointer-events: none; }
     #realgx-intro-lockup { position: relative; display: flex; align-items: center; justify-content: center; gap: 0; padding: 24px; }
     #realgx-intro-mark {
       width: clamp(76px, 14vw, 132px); height: clamp(76px, 14vw, 132px); object-fit: contain;
       filter: drop-shadow(0 0 18px rgba(0,240,255,.42));
-      animation: realgxMarkReveal 1.05s cubic-bezier(.16,1,.3,1) both;
+      animation: realgxMarkReveal 1.65s cubic-bezier(.16,1,.3,1) both;
     }
     #realgx-intro-wordmark {
       overflow: hidden; white-space: nowrap; max-width: 0; opacity: 0; margin-left: 0;
       font: 900 clamp(30px, 7vw, 68px)/1 Inter, sans-serif; letter-spacing: -.065em;
       color: #fff; text-shadow: 0 0 24px rgba(0,240,255,.25);
-      animation: realgxWordReveal .85s cubic-bezier(.16,1,.3,1) .78s forwards;
+      animation: realgxWordReveal 1.35s cubic-bezier(.16,1,.3,1) 1.25s forwards;
     }
     #realgx-intro-wordmark span {
       background: linear-gradient(100deg,#fff 5%,#67e8f9 48%,#c4b5fd 78%,#f9a8d4);
@@ -275,25 +275,21 @@
     (() => {
       const intro = document.getElementById('realgx-intro');
       if (!intro) return;
-      let alreadyPlayed = false;
-      try {
-        alreadyPlayed = sessionStorage.getItem('realgx-intro-played') === '1';
-        if (!alreadyPlayed) sessionStorage.setItem('realgx-intro-played', '1');
-      } catch (_) {}
-      if (alreadyPlayed || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // Run on every full page load, including refreshes. Same-page navigation does not reload this overlay.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         intro.remove();
         return;
       }
       const finish = () => {
         if (!intro.isConnected) return;
         intro.classList.add('is-leaving');
-        window.setTimeout(() => intro.remove(), 700);
+        window.setTimeout(() => intro.remove(), 900);
       };
       document.getElementById('realgx-intro-skip')?.addEventListener('click', finish);
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape') finish();
       }, { once: true });
-      window.setTimeout(finish, 2850);
+      window.setTimeout(finish, 5600);
     })();
   </script>
 
