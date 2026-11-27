@@ -764,10 +764,14 @@
 
   async function extractZipArchive(file){
     if(!file)return;
-    if(file.size>100*1024*1024)throw new Error("ZIP archive exceeds the 100 MB archive limit.");
+    const maxArchiveBytes=500*1024*1024;
+    const maxExpandedBytes=200*1024*1024;
+    if(file.size>maxArchiveBytes)throw new Error("ZIP archive is larger than the 500 MB browser import limit. Split it into smaller ZIP files and try again.");
     if(!window.JSZip)throw new Error("ZIP extraction library did not load. Refresh the page and try again.");
-    log("Reading ZIP archive: "+file.name+"…");
-    const archive=await JSZip.loadAsync(file,{checkCRC32:true});
+    log("Reading ZIP archive: "+file.name+" ("+(file.size/1024/1024).toFixed(1)+" MB)…");
+    // Do not pre-decompress every entry for CRC checking. Entries are extracted
+    // one at a time below, with per-image and total expanded-size safeguards.
+    const archive=await JSZip.loadAsync(file,{checkCRC32:false});
     const entries=Object.values(archive.files).filter(entry=>!entry.dir&&!entry.name.split("/").some(part=>part==="__MACOSX"||part.startsWith("."))&&/\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(entry.name));
     if(!entries.length)throw new Error("No supported wallpaper images were found in this ZIP archive.");
     if(entries.length>100)throw new Error("This ZIP contains "+entries.length+" images. The current batch limit is 100 images; split it into smaller ZIP files.");
@@ -777,10 +781,10 @@
       const declaredSize=Number(entry._data?.uncompressedSize||0);
       if(declaredSize>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
       declaredBytes+=declaredSize;
-      if(declaredBytes>200*1024*1024)throw new Error("ZIP declares more than 200 MB of extracted content; archive rejected.");
+      if(declaredBytes>maxExpandedBytes)throw new Error("ZIP contains more than 200 MB of supported extracted content; split it into smaller ZIP files.");
       const blob=await entry.async("blob");
       totalBytes+=blob.size;
-      if(totalBytes>200*1024*1024)throw new Error("Extracted content exceeds the 200 MB safety limit.");
+      if(totalBytes>maxExpandedBytes)throw new Error("Extracted content exceeds the 200 MB safety limit; split the archive into smaller ZIP files.");
       if(blob.size>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
       const ext=(entry.name.match(/\.([^.]+)$/)||[])[1]?.toLowerCase()||"";
       const mime={jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif",avif:"image/avif",bmp:"image/bmp",tif:"image/tiff",tiff:"image/tiff"}[ext];
@@ -791,7 +795,7 @@
     }
     if(!extracted.length)throw new Error("No images within the 3 MB per-image limit could be extracted.");
     await setFiles(extracted,true);
-    log("ZIP extraction complete: "+extracted.length+" image(s) added to the upload queue"+(skippedLarge?", "+skippedLarge+" oversized image(s) skipped":"")+".","success");
+    log("ZIP extraction complete: "+extracted.length+" image(s) added to the upload queue from "+(file.size/1024/1024).toFixed(1)+" MB archive"+(skippedLarge?", "+skippedLarge+" oversized image(s) skipped":"")+".","success");
   }
   $("zip-import-btn").addEventListener("click",()=>$("zip-file").click());
   $("zip-file").addEventListener("change",async e=>{
