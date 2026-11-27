@@ -1169,6 +1169,39 @@
         results.innerHTML = '<p class="rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm text-emerald-300">No exact duplicate files were found among the images that could be verified.</p>';
         return;
       }
+      const globalSelection = document.createElement('div');
+      globalSelection.className = 'rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+      const globalSelectionInfo = document.createElement('p');
+      globalSelectionInfo.className = 'text-xs text-cyan-100';
+      globalSelectionInfo.textContent = 'Global selection: select every removable extra copy across all duplicate groups. One copy in each group is always protected.';
+      const globalSelectionActions = document.createElement('div');
+      globalSelectionActions.className = 'flex flex-wrap items-center gap-2';
+      const globalSelectAll = document.createElement('button');
+      globalSelectAll.type = 'button';
+      globalSelectAll.className = 'rounded-lg border border-cyan-400/50 bg-cyan-950/50 px-4 py-2 text-xs font-black text-cyan-100';
+      globalSelectAll.textContent = 'Select all duplicates';
+      const globalSelectionCount = document.createElement('span');
+      globalSelectionCount.className = 'text-[11px] text-slate-300';
+      const allGroupCheckboxes = [];
+      const updateGlobalSelection = () => {
+        const selectedCount = allGroupCheckboxes.filter(item => item.checkbox.checked).length;
+        const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
+        globalSelectAll.textContent = selectedCount === totalExtras && totalExtras > 0 ? 'Clear all selections' : 'Select all duplicates';
+        globalSelectionCount.textContent = selectedCount + ' / ' + totalExtras + ' extra copies selected';
+      };
+      globalSelectAll.addEventListener('click', () => {
+        const totalExtras = allGroupCheckboxes.filter(item => item.isExtra).length;
+        const allSelected = allGroupCheckboxes.filter(item => item.isExtra && item.checkbox.checked).length === totalExtras;
+        allGroupCheckboxes.forEach(item => {
+          if (item.isExtra) item.checkbox.checked = !allSelected;
+        });
+        updateGlobalSelection();
+        results.querySelectorAll('[data-group-selection-update]').forEach(button => button.click());
+      });
+      globalSelectionActions.append(globalSelectAll, globalSelectionCount);
+      globalSelection.append(globalSelectionInfo, globalSelectionActions);
+      results.append(globalSelection);
+
       groups.forEach((group, groupIndex) => {
         const section = document.createElement('section');
         section.className = 'rounded-xl border border-amber-500/30 bg-slate-950/60 p-3 sm:p-4 space-y-3';
@@ -1207,6 +1240,7 @@
           card.append(checkbox, img, details);
           grid.append(card);
           checkboxes.push({ checkbox, row });
+          allGroupCheckboxes.push({ checkbox, row, isExtra: checkboxes.length > 1 });
         });
         const actions = document.createElement('div');
         actions.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-3';
@@ -1236,8 +1270,18 @@
           });
           updateButton();
         });
-        checkboxes.forEach(item => item.checkbox.addEventListener('change', updateButton));
+        checkboxes.forEach(item => item.checkbox.addEventListener('change', () => {
+          updateButton();
+          updateGlobalSelection();
+        }));
+        const groupSelectionSync = document.createElement('button');
+        groupSelectionSync.type = 'button';
+        groupSelectionSync.hidden = true;
+        groupSelectionSync.dataset.groupSelectionUpdate = 'true';
+        groupSelectionSync.addEventListener('click', updateButton);
+        selectionControls.append(groupSelectionSync);
         updateButton();
+        updateGlobalSelection();
         remove.addEventListener('click', async () => {
           const selected = checkboxes.filter(item => item.checkbox.checked).map(item => item.row);
           if (!selected.length || selected.length >= group.items.length) return;
