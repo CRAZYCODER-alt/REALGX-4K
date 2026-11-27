@@ -1018,7 +1018,7 @@
           $("browser-ai-status").textContent="GPU unavailable · switching to CPU/WASM…";
           $("browser-ai-progress").style.width="0%";
           try{
-            model=await initializeModel("cpu","q8");
+            model=await initializeModel("wasm","q8");
             browserAIBackend="CPU/WASM";
           }catch(cpuError){
             throw new Error(
