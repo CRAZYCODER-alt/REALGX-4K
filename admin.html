@@ -120,7 +120,7 @@
           <p class="text-xs text-slate-500 mt-1">Multiple files supported · 25 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="zip-import-btn" class="rounded-xl border border-emerald-500/50 bg-emerald-950/40 px-4 py-2.5 text-xs font-bold text-emerald-200 hover:bg-emerald-900/50">＋ Import ZIP archive</button><input id="zip-file" type="file" accept=".zip,application/zip" class="hidden"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Select one ZIP archive to extract its images in the browser, or add individual images. Extracted images are queued locally; only the ZIP requires browser file-selection approval.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
+        <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="zip-import-btn" class="rounded-xl border border-emerald-500/50 bg-emerald-950/40 px-4 py-2.5 text-xs font-bold text-emerald-200 hover:bg-emerald-900/50">＋ Import ZIP archive</button><input id="zip-file" type="file" accept=".zip,application/zip" class="hidden"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Works on desktop and mobile. For phones, use smaller ZIP files (up to 40 MB and 25 images) or select images directly to reduce memory use. AI metadata runs online; no model download is needed.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
 
         <section id="wallpaper-editor" class="mt-5 rounded-2xl border border-cyan-500/30 bg-slate-950/70 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2"><div><h3 class="font-black text-base">Wallpaper Intelligence & Studio</h3><p class="text-xs text-slate-400 mt-1">Every new image is checked for orientation and analyzed for title, description and category after import. Review edits before publishing.</p></div><span id="analysis-status" class="text-[11px] rounded-full border border-slate-700 px-3 py-1 text-slate-300">Waiting for image</span></div>
@@ -764,9 +764,11 @@
 
   async function extractZipArchive(file){
     if(!file)return;
-    const maxArchiveBytes=500*1024*1024;
-    const maxExpandedBytes=200*1024*1024;
-    if(file.size>maxArchiveBytes)throw new Error("ZIP archive is larger than the 500 MB browser import limit. Split it into smaller ZIP files and try again.");
+    const mobileDevice=window.matchMedia("(max-width: 767px), (pointer: coarse)").matches;
+    const maxArchiveBytes=mobileDevice?40*1024*1024:500*1024*1024;
+    const maxExpandedBytes=mobileDevice?100*1024*1024:200*1024*1024;
+    const maxImages=mobileDevice?25:100;
+    if(file.size>maxArchiveBytes)throw new Error(mobileDevice?"This ZIP is larger than the 40 MB phone import limit. Split it into smaller ZIP files or select the images directly.":"ZIP archive is larger than the 500 MB browser import limit. Split it into smaller ZIP files and try again.");
     if(!window.JSZip)throw new Error("ZIP extraction library did not load. Refresh the page and try again.");
     log("Reading ZIP archive: "+file.name+" ("+(file.size/1024/1024).toFixed(1)+" MB)…");
     // Do not pre-decompress every entry for CRC checking. Entries are extracted
@@ -774,7 +776,7 @@
     const archive=await JSZip.loadAsync(file,{checkCRC32:false});
     const entries=Object.values(archive.files).filter(entry=>!entry.dir&&!entry.name.split("/").some(part=>part==="__MACOSX"||part.startsWith("."))&&/\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(entry.name));
     if(!entries.length)throw new Error("No supported wallpaper images were found in this ZIP archive.");
-    if(entries.length>100)throw new Error("This ZIP contains "+entries.length+" images. The current batch limit is 100 images; split it into smaller ZIP files.");
+    if(entries.length>maxImages)throw new Error("This ZIP contains "+entries.length+" images. The "+(mobileDevice?"phone":"desktop")+" batch limit is "+maxImages+" images; split it into smaller ZIP files.");
     const extracted=[];let totalBytes=0,declaredBytes=0,skippedLarge=0;
     for(let i=0;i<entries.length;i++){
       const entry=entries[i];
@@ -1002,16 +1004,24 @@
       if(aiBatchRunning||!indices.length)return;
       aiBatchRunning=true;$("ai-generate-current").disabled=true;$("ai-generate-all").disabled=true;
       $("review-approved").checked=false;$("upload-btn").disabled=true;
-      let completed=0,failed=0,nextIndex=0;
+      let completed=0,failed=0,skipped=0,nextIndex=0,providerStopReason="";
       const total=indices.length;
       progress(0,total,"Preparing automatic AI metadata analysis…");
+      const providerUnavailable=message=>/Gemini HTTP 429|OpenRouter HTTP 402|rate.?limit|quota|insufficient credits|API key is not configured|GROQ_API_KEY/i.test(String(message||""));
       const worker=async()=>{
         while(true){
           const position=nextIndex++;
           if(position>=total)return;
           const i=indices[position];
           const file=selectedFiles[i];
-          $("metadata-ai-status").textContent="Analysing "+(position+1)+" / "+total+" (sequential fallback)";
+          if(providerStopReason){
+            skipped++;
+            imageStates[i].metadataStatus="failed";
+            imageStates[i].metadataNote="Not attempted because the AI provider is unavailable: "+providerStopReason;
+            progress(completed+failed+skipped,total,"AI paused · "+completed+" ready · "+failed+" failed · "+skipped+" not attempted");
+            continue;
+          }
+          $("metadata-ai-status").textContent="Analysing "+(position+1)+" / "+total+" (one at a time)";
           try{
             const metadata=await generateMetadataForImage(file,i);
             completed++;
@@ -1021,16 +1031,20 @@
             imageStates[i].metadataStatus="failed";
             imageStates[i].metadataNote=error?.message||String(error);
             log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");
+            if(providerUnavailable(error?.message)){
+              providerStopReason=error?.message||"The configured AI providers have reached their limits.";
+              log("Batch paused to avoid wasting requests: the configured AI providers are rate-limited, out of credits, or missing a key. Remaining images stay queued for retry when a provider is available.","error");
+            }
           }finally{
-            progress(completed+failed,total,"AI metadata "+(completed+failed)+" / "+total+" · "+completed+" ready · "+failed+" failed");
+            progress(completed+failed+skipped,total,"AI metadata "+(completed+failed+skipped)+" / "+total+" · "+completed+" ready · "+failed+" failed · "+skipped+" not attempted");
             if(i===currentEditorIndex)renderEditor();
           }
         }
       };
       try{
         await Promise.all(Array.from({length:Math.min(Math.max(1,workerLimit),total)},()=>worker()));
-        $("metadata-ai-status").textContent=completed+" generated · "+failed+" failed";
-        log("AI metadata batch finished: "+completed+" generated, "+failed+" failed. No placeholder metadata was generated.",failed?"error":"success");
+        $("metadata-ai-status").textContent=completed+" generated · "+failed+" failed · "+skipped+" paused";
+        log("AI metadata batch finished: "+completed+" generated, "+failed+" failed, "+skipped+" not attempted. No placeholder metadata was generated.",failed||skipped?"error":"success");
         updateFailedMetadataControl();
       }finally{
         aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;updateFailedMetadataControl();
