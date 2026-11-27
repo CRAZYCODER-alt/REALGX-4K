@@ -950,10 +950,29 @@
   const BROWSER_AI_MODEL_ID="HuggingFaceTB/SmolVLM-256M-Instruct";
   async function getBrowserAIImports(){
     if(!browserAIImportsPromise){
-      browserAIImportsPromise=Promise.all([
-        import("https://esm.sh/ai@6.0.0?bundle"),
-        import("https://esm.sh/@browser-ai/transformers-js@2.0.0?bundle")
-      ]).then(([ai,provider])=>({generateText:ai.generateText,transformersJS:provider.transformersJS}));
+      browserAIImportsPromise=(async()=>{
+        const cdnPairs=[
+          [
+            "https://esm.sh/ai@6.0.0?bundle",
+            "https://esm.sh/@browser-ai/transformers-js@2.2.4?bundle"
+          ],
+          [
+            "https://cdn.jsdelivr.net/npm/ai@6.0.0/+esm",
+            "https://cdn.jsdelivr.net/npm/@browser-ai/transformers-js@2.2.4/+esm"
+          ]
+        ];
+        let lastError=null;
+        for(const [aiUrl,providerUrl] of cdnPairs){
+          try{
+            const [ai,provider]=await Promise.all([import(aiUrl),import(providerUrl)]);
+            if(typeof ai.generateText!=="function"||typeof provider.transformersJS!=="function"){
+              throw new Error("The downloaded browser AI packages did not expose the expected APIs.");
+            }
+            return {generateText:ai.generateText,transformersJS:provider.transformersJS};
+          }catch(error){lastError=error;}
+        }
+        throw new Error("Both browser AI CDNs failed. "+(lastError?.message||"Check your connection or content blockers."));
+      })();
     }
     try{return await browserAIImportsPromise;}
     catch(error){browserAIImportsPromise=null;throw new Error("Could not load the browser AI runtime: "+(error?.message||error));}
