@@ -902,7 +902,7 @@
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
     // Send the original File as multipart data. This avoids base64's 33% size
-    // overhead and removes the old Vercel 4.5 MB request-body bottleneck.
+    // overhead and avoids the old base64 payload overhead and 3 MB client-side restriction.
     const body = new FormData();
     body.append('file', file, uploadName);
     body.append('fileName', uploadName);
