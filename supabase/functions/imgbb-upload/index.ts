@@ -39,25 +39,25 @@ Deno.serve(async (req: Request) => {
       return reply(403, { success: false, error: "This account is not authorized to upload wallpapers." });
     }
 
-    const payload = await req.json();
-    const { fileName, contentType, imageBase64 } = payload ?? {};
-    if (typeof fileName !== "string" || typeof imageBase64 !== "string" || !imageBase64) {
-      return reply(400, { success: false, error: "Missing image data or filename." });
+    const payload = await req.formData();
+    const imageFile = payload.get("file");
+    const requestedName = payload.get("fileName");
+    if (!(imageFile instanceof File) || typeof requestedName !== "string" || !requestedName.trim()) {
+      return reply(400, { success: false, error: "Missing image file or filename." });
     }
-    if (typeof contentType !== "string" || !contentType.startsWith("image/")) {
+    if (!imageFile.type || !imageFile.type.startsWith("image/")) {
       return reply(400, { success: false, error: "Only image files are accepted." });
     }
 
-    const binary = atob(imageBase64);
-    if (binary.length === 0 || binary.length > 3 * 1024 * 1024) {
-      return reply(413, { success: false, error: "Image must be 3 MB or smaller." });
+    const maxImageBytes = 25 * 1024 * 1024;
+    if (imageFile.size === 0 || imageFile.size > maxImageBytes) {
+      return reply(413, { success: false, error: "Image must be 25 MB or smaller." });
     }
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 
-    const safeName = fileName.replace(/[\\/\0]/g, "_").slice(0, 180) || "wallpaper";
+    const safeName = requestedName.replace(/[\\/\0]/g, "_").slice(0, 180) || "wallpaper";
     const form = new FormData();
-    form.append("image", new Blob([bytes], { type: contentType }), safeName);
+    // Reuse the parsed File directly; no base64 conversion or extra byte copy.
+    form.append("image", imageFile, safeName);
     form.append("name", safeName.replace(/\.[^.]+$/, "").slice(0, 180));
 
     const uploadResponse = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbApiKey)}`, {
