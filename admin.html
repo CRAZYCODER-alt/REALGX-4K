@@ -1074,9 +1074,16 @@ Rules: cars, motorcycles and vehicles as the main subject MUST be Cars. Landscap
 Filename for reference only: ${String(file.name||"").slice(0,120)}
 If uncertain, describe only what is clearly visible. Do not guess.`;
     $("browser-ai-status").textContent="Analysing locally…";
+    // AI SDK v6 ModelMessage image parts accept Uint8Array/ArrayBuffer/URL,
+    // but not a Blob instance. Convert the compressed preview Blob before
+    // building the multimodal message to prevent ModelMessage[] schema errors.
+    const imageBytes=new Uint8Array(await analysisBlob.arrayBuffer());
     const result=await generateText({
       model,
-      messages:[{role:"user",content:[{type:"text",text:prompt},{type:"image",image:analysisBlob}]}],
+      messages:[{role:"user",content:[
+        {type:"text",text:prompt},
+        {type:"image",image:imageBytes,mediaType:analysisBlob.type||"image/jpeg"}
+      ]}],
       temperature:0.2,
       maxOutputTokens:260
     });
