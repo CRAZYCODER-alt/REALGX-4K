@@ -1060,6 +1060,23 @@
     });
   }
 
+  async function requestDuplicateBatch(items, forceHash = false, accessToken) {
+    const response = await fetch(SUPABASE_URL + '/functions/v1/hash-wallpapers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + accessToken
+      },
+      body: JSON.stringify({ items, forceHash })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.success || !Array.isArray(payload.results)) {
+      throw new Error(payload.error || 'Image verification failed (HTTP ' + response.status + ').');
+    }
+    return payload;
+  }
+
   async function scanExactDuplicates() {
     const button = $('scan-duplicates');
     const status = $('duplicate-status');
@@ -1078,31 +1095,64 @@
       }
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
-      status.textContent = 'Checking file sizes first, then hashing only possible matches…';
-      const response = await fetch(SUPABASE_URL + '/functions/v1/hash-wallpapers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': 'Bearer ' + session.access_token
-        },
-        body: JSON.stringify({ items: rows.map(row => ({ id: String(row.id), url: row.full_url })) })
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.success || !Array.isArray(payload.results)) {
-        throw new Error(payload.error || 'Image verification failed (HTTP ' + response.status + ').');
+
+      const accessToken = session.access_token;
+      const batchSize = 150;
+      const allResults = new Map();
+      let hashedCount = 0;
+      let sizeSkippedCount = 0;
+      const totalBatches = Math.ceil(rows.length / batchSize);
+
+      for (let offset = 0; offset < rows.length; offset += batchSize) {
+        const batch = rows.slice(offset, offset + batchSize);
+        const batchNumber = Math.floor(offset / batchSize) + 1;
+        status.textContent = 'Checking gallery batch ' + batchNumber + ' of ' + totalBatches + ' (' + rows.length + ' wallpapers total)…';
+        const payload = await requestDuplicateBatch(
+          batch.map(row => ({ id: String(row.id), url: row.full_url })),
+          false,
+          accessToken
+        );
+        payload.results.forEach(item => allResults.set(String(item.id), item));
+        hashedCount += Number(payload.stats?.hashed || 0);
+        sizeSkippedCount += Number(payload.stats?.skippedByUniqueSize || 0);
       }
 
-      const byId = new Map(payload.results.map(item => [String(item.id), item]));
+      // A file size that was unique inside one batch may match a file in another.
+      // Re-hash those cross-batch candidates before deciding whether they are duplicates.
+      const sizeCounts = new Map();
+      allResults.forEach(item => {
+        if (!item.error && Number.isFinite(Number(item.bytes)) && Number(item.bytes) > 0) {
+          const size = Number(item.bytes);
+          sizeCounts.set(size, (sizeCounts.get(size) || 0) + 1);
+        }
+      });
+      const crossBatchCandidates = rows.filter(row => {
+        const item = allResults.get(String(row.id));
+        return item?.uniqueBySize && sizeCounts.get(Number(item.bytes)) > 1;
+      });
+
+      for (let offset = 0; offset < crossBatchCandidates.length; offset += batchSize) {
+        const batch = crossBatchCandidates.slice(offset, offset + batchSize);
+        status.textContent = 'Verifying matching-size files across batches (' +
+          Math.min(offset + batch.length, crossBatchCandidates.length) + ' of ' + crossBatchCandidates.length + ')…';
+        const payload = await requestDuplicateBatch(
+          batch.map(row => ({ id: String(row.id), url: row.full_url })),
+          true,
+          accessToken
+        );
+        payload.results.forEach(item => allResults.set(String(item.id), item));
+        hashedCount += Number(payload.stats?.hashed || 0);
+      }
+
       const hashGroups = new Map();
       let verified = 0, unverified = skipped;
       rows.forEach(row => {
-        const result = byId.get(String(row.id));
+        const result = allResults.get(String(row.id));
         if (result?.hash) {
           verified++;
           if (!hashGroups.has(result.hash)) hashGroups.set(result.hash, []);
           hashGroups.get(result.hash).push(row);
-        } else if (result?.uniqueBySize) {
+        } else if (result?.uniqueBySize && sizeCounts.get(Number(result.bytes)) === 1) {
           verified++;
         } else {
           unverified++;
@@ -1111,9 +1161,10 @@
       const groups = Array.from(hashGroups.entries())
         .filter(([, items]) => items.length > 1)
         .map(([hash, items]) => ({ hash, items }));
-      const hashedCount = Number(payload.stats?.hashed || 0);
-      const skippedBySize = Number(payload.stats?.skippedByUniqueSize || 0);
-      status.textContent = 'Scan complete: ' + verified + ' verified · ' + groups.length + ' exact-duplicate group(s). ' + hashedCount + ' file(s) hashed; ' + skippedBySize + ' skipped safely by unique file size · ' + unverified + ' unverified.';
+      const safelySkipped = Math.max(0, sizeSkippedCount - crossBatchCandidates.length);
+      status.textContent = 'Scan complete: ' + verified + ' verified · ' + groups.length +
+        ' exact-duplicate group(s). ' + hashedCount + ' file(s) hashed; ' + safelySkipped +
+        ' skipped safely by unique file size · ' + unverified + ' unverified.';
       if (!groups.length) {
         results.innerHTML = '<p class="rounded-xl border border-slate-700 bg-slate-950/60 p-4 text-sm text-emerald-300">No exact duplicate files were found among the images that could be verified.</p>';
         return;
@@ -1131,55 +1182,47 @@
         hashLabel.textContent = 'SHA-256: ' + group.hash;
         heading.append(title, hashLabel);
         const grid = document.createElement('div');
-        grid.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3';
+        grid.className = 'grid sm:grid-cols-2 lg:grid-cols-3 gap-3';
         const checkboxes = [];
         group.items.forEach(row => {
-          const label = document.createElement('label');
-          label.className = 'min-w-0 rounded-xl border border-slate-700 bg-slate-900/70 p-2 flex gap-3 cursor-pointer hover:border-cyan-500/50';
+          const card = document.createElement('label');
+          card.className = 'rounded-lg border border-slate-700 bg-slate-900/70 p-2 flex gap-3 items-start cursor-pointer';
           const checkbox = document.createElement('input');
           checkbox.type = 'checkbox';
-          checkbox.className = 'mt-1 h-4 w-4 shrink-0 accent-rose-500';
-          checkbox.setAttribute('aria-label', 'Select ' + row.title + ' for gallery removal');
-          const content = document.createElement('div');
-          content.className = 'min-w-0 flex-1';
-          const image = document.createElement('img');
-          image.src = row.preview_url || row.full_url;
-          image.alt = row.title || 'Wallpaper preview';
-          image.loading = 'lazy';
-          image.className = 'w-full aspect-video object-cover rounded-lg bg-slate-800';
-          const name = document.createElement('p');
-          name.className = 'mt-2 text-xs font-bold text-slate-100 break-words';
+          checkbox.className = 'mt-1 accent-rose-400 shrink-0';
+          const img = document.createElement('img');
+          img.src = row.preview_url || row.full_url;
+          img.alt = row.title || 'Wallpaper';
+          img.loading = 'lazy';
+          img.className = 'w-20 h-20 object-cover rounded-md shrink-0';
+          const details = document.createElement('span');
+          details.className = 'min-w-0';
+          const name = document.createElement('span');
+          name.className = 'block text-xs font-bold break-words';
           name.textContent = row.title || 'Untitled wallpaper';
-          const id = document.createElement('p');
-          id.className = 'mt-1 text-[10px] text-slate-500';
+          const id = document.createElement('span');
+          id.className = 'block text-[10px] text-slate-500 mt-1';
           id.textContent = 'Gallery ID: ' + row.id;
-          const hint = document.createElement('p');
-          hint.className = 'mt-2 text-[10px] text-rose-200';
-          hint.textContent = 'Select this listing only if you want to remove it.';
-          content.append(image, name, id, hint);
-          label.append(checkbox, content);
-          grid.append(label);
+          details.append(name, id);
+          card.append(checkbox, img, details);
+          grid.append(card);
           checkboxes.push({ checkbox, row });
         });
         const actions = document.createElement('div');
-        actions.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-800 pt-3';
+        actions.className = 'flex flex-col sm:flex-row sm:items-center justify-between gap-3';
         const instruction = document.createElement('p');
         instruction.className = 'text-[11px] text-slate-400';
-        instruction.textContent = 'Keep at least one copy. No image is selected by default.';
+        instruction.textContent = 'Select only the extra listing(s) you want to remove. At least one copy must remain.';
         const remove = document.createElement('button');
         remove.type = 'button';
-        remove.disabled = true;
-        remove.className = 'rounded-lg border border-rose-500/40 bg-rose-950/30 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-rose-900/50';
-        remove.textContent = 'Remove selected gallery listings';
+        remove.className = 'rounded-lg border border-rose-500/40 bg-rose-950/30 px-4 py-2 text-xs font-bold text-rose-200 disabled:opacity-40';
+        remove.textContent = 'Remove selected duplicates';
         const updateButton = () => {
-          const selected = checkboxes.filter(item => item.checkbox.checked).length;
-          remove.disabled = selected === 0 || selected >= group.items.length;
-          remove.textContent = selected ? 'Remove ' + selected + ' selected listing(s)' : 'Remove selected gallery listings';
-          instruction.textContent = selected >= group.items.length
-            ? 'You must keep at least one copy in this group.'
-            : selected ? selected + ' selected · ' + (group.items.length - selected) + ' will remain.' : 'Keep at least one copy. No image is selected by default.';
+          const count = checkboxes.filter(item => item.checkbox.checked).length;
+          remove.disabled = count < 1 || count >= group.items.length;
         };
         checkboxes.forEach(item => item.checkbox.addEventListener('change', updateButton));
+        updateButton();
         remove.addEventListener('click', async () => {
           const selected = checkboxes.filter(item => item.checkbox.checked).map(item => item.row);
           if (!selected.length || selected.length >= group.items.length) return;
