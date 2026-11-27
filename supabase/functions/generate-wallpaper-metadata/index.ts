@@ -224,7 +224,7 @@ Deno.serve(async (req: Request) => {
     const groqKey = Deno.env.get("GROQ_API_KEY");
     const groqModel = (Deno.env.get("GROQ_MODEL") || "qwen/qwen3.8-27b").trim();
     const huggingFaceKey = Deno.env.get("HF_TOKEN");
-    const huggingFaceModel = (Deno.env.get("HF_MODEL") || "Qwen/Qwen3-VL-30B-A3B-Instruct:deepinfra").trim();
+    const huggingFaceModel = (Deno.env.get("HF_MODEL") || "Qwen/Qwen3-VL-8B-Instruct:parasail").trim();
     const geminiModel = (Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash").trim();
     const requestedModel = typeof payload.openRouterModel === "string" ? payload.openRouterModel.trim() : "";
     const openRouterModel = allowedModels.includes(requestedModel) ? requestedModel :
