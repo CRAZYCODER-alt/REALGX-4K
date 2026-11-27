@@ -987,7 +987,11 @@
           const settings={isVisionModel:true,device};
           if(dtype)settings.dtype=dtype;
           const model=transformersJS(BROWSER_AI_MODEL_ID,settings);
-          const availability=await model.availability();
+          // The provider's availability probe can incorrectly report a missing
+          // WebGPU adapter even when the WASM execution provider is selected.
+          // For WASM, attempt session creation directly instead of blocking on
+          // that probe. Session creation is the definitive backend check.
+          const availability=device==="wasm"?"downloadable":await model.availability();
           if(availability==="unavailable"){
             throw new Error(device==="webgpu"
               ?"WebGPU is unavailable on this browser or device."
@@ -995,7 +999,7 @@
           }
           $("browser-ai-status").textContent=device==="webgpu"
             ?(availability==="downloadable"?"Preparing GPU model…":"Starting GPU model…")
-            :(availability==="downloadable"?"Downloading CPU/WASM model…":"Preparing CPU/WASM model…");
+            :(availability==="downloadable"?"Preparing CPU/WASM model…":"Starting CPU/WASM model…");
           await model.createSessionWithProgress((event)=>{
             const progressValue=typeof event==="number"?event:event?.progress;
             if(typeof progressValue==="number"){
@@ -1007,23 +1011,28 @@
           return model;
         };
 
-        $("browser-ai-status").textContent="Checking WebGPU…";
         $("browser-ai-download").disabled=true;
         let model=null;
+        let wasmError=null;
+        // Try the CPU/WASM execution provider first. It does not require a GPU
+        // or experimental Chrome flags, and avoids a known false-negative
+        // WebGPU availability probe in this provider/runtime combination.
         try{
-          model=await initializeModel("webgpu");
-          browserAIBackend="WebGPU";
-        }catch(gpuError){
-          console.warn("REALGX browser AI: WebGPU unavailable; trying CPU/WASM.",gpuError);
-          $("browser-ai-status").textContent="GPU unavailable · switching to CPU/WASM…";
+          $("browser-ai-status").textContent="Starting CPU/WASM…";
+          model=await initializeModel("wasm","q8");
+          browserAIBackend="CPU/WASM";
+        }catch(error){
+          wasmError=error;
+          console.warn("REALGX browser AI: CPU/WASM initialization failed; trying WebGPU.",error);
+          $("browser-ai-status").textContent="CPU/WASM unavailable · checking WebGPU…";
           $("browser-ai-progress").style.width="0%";
           try{
-            model=await initializeModel("wasm","q8");
-            browserAIBackend="CPU/WASM";
-          }catch(cpuError){
+            model=await initializeModel("webgpu");
+            browserAIBackend="WebGPU";
+          }catch(gpuError){
             throw new Error(
-              "WebGPU could not start ("+(gpuError?.message||gpuError)+"). "+
-              "CPU/WASM fallback also failed ("+(cpuError?.message||cpuError)+")."
+              "CPU/WASM initialization failed ("+(wasmError?.message||wasmError)+"). "+
+              "WebGPU initialization failed ("+(gpuError?.message||gpuError)+")."
             );
           }
         }
