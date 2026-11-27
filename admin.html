@@ -129,7 +129,7 @@
               <div class="rounded-xl border border-slate-800 bg-[#050812] p-2 sm:p-3"><div class="flex items-center justify-between gap-2 pb-2"><span class="text-[10px] uppercase tracking-wider text-slate-500">Freeform editing workspace · image proportions preserved</span><span class="text-[10px] text-cyan-300">No device frame</span></div><canvas id="editor-canvas" class="block w-full h-auto rounded-lg bg-[#050812]" style="aspect-ratio:3/2"></canvas><p id="editor-empty" class="text-xs text-slate-500 text-center py-8">Select an image to start the analysis</p></div>
               <p id="editor-dimensions" class="text-[11px] text-slate-400">Image details will appear here.</p></div>
             <div class="space-y-3"><div class="rounded-xl border border-slate-800 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">Image intelligence</p><span class="text-[9px] text-emerald-300 border border-emerald-500/30 rounded-full px-2 py-1">On-device</span></div><div id="analysis-details" class="analysis-details space-y-1 text-[11px] leading-snug text-slate-300"><p>Every newly imported wallpaper is checked individually for rotation. Low-confidence results are left unchanged for manual review. Mirror direction is not reliably detectable; manual flip controls are below.</p></div><button type="button" id="auto-orient-current" class="w-full rounded-lg border border-cyan-500/40 bg-cyan-950/30 px-3 py-2 text-xs font-bold text-cyan-200 hover:bg-cyan-900/40">↻ Check rotation</button><p class="text-[10px] leading-snug text-slate-500">Use the rotation and flip controls below to correct the image manually. Review the preview before publishing.</p></div>
-              <div class="rounded-xl border border-cyan-500/30 bg-slate-900/70 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">AI-generated metadata</p><span id="metadata-ai-status" class="text-[10px] text-slate-400">Ready</span></div><label class="block mt-3 text-xs text-slate-300">OpenRouter vision model<select id="openrouter-model" class="field mt-1 w-full rounded-lg p-2"><option value="openai/gpt-4.1-mini">OpenAI GPT-4.1 Mini · recommended</option><option value="anthropic/claude-sonnet-4.5">Anthropic Claude Sonnet 4.5</option><option value="google/gemini-2.5-flash">Google Gemini 2.5 Flash</option></select></label><p class="text-[10px] text-slate-500 mt-1">Gemini is tried first. OpenRouter is used automatically if Gemini is unavailable. Choose the backup vision model here.</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><button type="button" id="ai-generate-current" class="rounded-lg border border-violet-500/50 bg-violet-950/40 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-900/50">✦ Generate for this image</button><button type="button" id="ai-generate-all" class="rounded-lg border border-fuchsia-500/50 bg-fuchsia-950/40 px-3 py-2 text-xs font-bold text-fuchsia-200 hover:bg-fuchsia-900/50">✦ Generate for all images</button></div><label class="block text-xs text-slate-300">Title<input id="editor-title" maxlength="120" class="field mt-1 w-full rounded-lg p-2" placeholder="AI-generated title (editable)"></label><label class="block text-xs text-slate-300">Description<textarea id="editor-description" rows="3" maxlength="1000" class="field mt-1 w-full rounded-lg p-2 resize-y" placeholder="AI-generated description (editable)"></textarea></label><label class="block text-xs text-slate-300">Suggested category<select id="editor-category" class="field mt-1 w-full rounded-lg p-2"><option>Gaming</option><option>Nature</option><option>Anime</option><option>Cyberpunk</option><option>Minimalist</option><option>Cars</option></select></label><p class="text-[10px] text-slate-500">Orientation detection runs on every newly imported image. AI metadata starts automatically after importing individual images or a ZIP, processing up to 3 images at once using a smaller temporary preview. Original wallpapers stay unchanged. You can also retry with the buttons above. Review and edit every title, description and category before approving publication.</p></div><div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button></div>
+              <div class="rounded-xl border border-cyan-500/30 bg-slate-900/70 p-3 space-y-2"><div class="flex items-center justify-between gap-2"><p class="text-xs font-bold text-cyan-300">AI-generated metadata</p><span id="metadata-ai-status" class="text-[10px] text-slate-400">Ready</span></div><label class="block mt-3 text-xs text-slate-300">OpenRouter vision model<select id="openrouter-model" class="field mt-1 w-full rounded-lg p-2"><option value="openai/gpt-4.1-mini">OpenAI GPT-4.1 Mini · recommended</option><option value="anthropic/claude-sonnet-4.5">Anthropic Claude Sonnet 4.5</option><option value="google/gemini-2.5-flash">Google Gemini 2.5 Flash</option></select></label><p class="text-[10px] text-slate-500 mt-1">Automatic fallback order: Gemini → OpenRouter → Groq. Groq is the final vision fallback. Failed images can be retried without reprocessing successful ones.</p><div class="grid grid-cols-1 sm:grid-cols-2 gap-2"><button type="button" id="ai-generate-current" class="rounded-lg border border-violet-500/50 bg-violet-950/40 px-3 py-2 text-xs font-bold text-violet-200 hover:bg-violet-900/50">✦ Generate for this image</button><button type="button" id="ai-generate-all" class="rounded-lg border border-fuchsia-500/50 bg-fuchsia-950/40 px-3 py-2 text-xs font-bold text-fuchsia-200 hover:bg-fuchsia-900/50">✦ Generate for all images</button><button type="button" id="ai-retry-failed" class="hidden rounded-lg border border-amber-500/50 bg-amber-950/30 px-3 py-2 text-xs font-bold text-amber-200 hover:bg-amber-900/40">↻ Retry failed metadata (<span id="ai-failed-count">0</span>)</button></div><label class="block text-xs text-slate-300">Title<input id="editor-title" maxlength="120" class="field mt-1 w-full rounded-lg p-2" placeholder="AI-generated title (editable)"></label><label class="block text-xs text-slate-300">Description<textarea id="editor-description" rows="3" maxlength="1000" class="field mt-1 w-full rounded-lg p-2 resize-y" placeholder="AI-generated description (editable)"></textarea></label><label class="block text-xs text-slate-300">Suggested category<select id="editor-category" class="field mt-1 w-full rounded-lg p-2"><option>Gaming</option><option>Nature</option><option>Anime</option><option>Cyberpunk</option><option>Minimalist</option><option>Cars</option></select></label><p class="text-[10px] text-slate-500">Orientation detection runs on every newly imported image. AI metadata starts automatically after importing individual images or a ZIP, processing up to 3 images at once using a smaller temporary preview. Original wallpapers stay unchanged. You can also retry with the buttons above. Review and edit every title, description and category before approving publication.</p></div><div class="rounded-xl border border-slate-800 p-3 space-y-3"><p class="text-xs font-bold text-cyan-300">Manual adjustment toolbox</p><div class="grid grid-cols-2 gap-2"><button type="button" id="rotate-left" class="tool-btn">↶ Rotate 90°</button><button type="button" id="rotate-right" class="tool-btn">↷ Rotate 90°</button></div>
                 <div class="grid grid-cols-2 gap-2"><button type="button" id="flip-x-quick" class="tool-btn">↔ Flip horizontal</button><button type="button" id="flip-y-quick" class="tool-btn">↕ Flip vertical</button></div>
                 <label class="block text-xs text-slate-300">Zoom <span id="zoom-value" class="text-cyan-300">100%</span><input id="editor-zoom" type="range" min="25" max="600" step="5" value="100" class="w-full mt-2 accent-cyan-400"></label>
                 <label class="block text-xs text-slate-300">Horizontal position<input id="editor-x" type="range" min="-100" max="100" value="0" class="w-full mt-2 accent-cyan-400"></label>
@@ -211,7 +211,7 @@
       : 'No files selected';
   }
   function titleFromFilename(name){return String(name||"Wallpaper").replace(/\.[^.]+$/,"").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,c=>c.toUpperCase())||"Untitled Wallpaper";}
-  function defaultImageState(file=null){return {title:file?titleFromFilename(file.name):"",description:"",category:"",rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null};}
+  function defaultImageState(file=null){return {title:file?titleFromFilename(file.name):"",description:"",category:"",rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null,metadataStatus:"pending",metadataNote:""};}
   function isSupportedImage(file){
     return !!file && (file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(file.name||''));
   }
@@ -968,6 +968,7 @@
     imageStates[index].description=appliedDescription;
     imageStates[index].category=metadata.category;
     imageStates[index].metadataSource=result.provider||"ai";
+    imageStates[index].metadataStatus="generated";
     imageStates[index].metadataNote="";
     imageStates[index].metadataModel=result.model||"";
     // Update the visible editor immediately; do not rely on a later render cycle.
@@ -989,11 +990,17 @@
       const metadata=await generateMetadataForImage(file,index);
       renderEditor();$("editor-title").value=metadata.title||"";$("editor-description").value=metadata.description||"";$("editor-category").value=metadata.category||"";$("metadata-ai-status").textContent=metadata.metadataSource==="openrouter"?"OpenRouter generated · fields updated":"Gemini generated · fields updated";
       $("review-approved").checked=false;$("upload-btn").disabled=true;
-      log((metadata.metadataSource==="openrouter"?"OpenRouter":"Gemini")+" generated metadata for "+file.name+" using "+(metadata.metadataModel||"the selected model")+". Review or edit it before publishing.","success");
-    }catch(error){$("metadata-ai-status").textContent="Generation failed";log(file.name+": "+(error?.message||error),"error");}
+      log(metadata.metadataSource.toUpperCase()+" generated metadata for "+file.name+" using "+(metadata.metadataModel||"the selected model")+". Review or edit it before publishing.","success");
+    }catch(error){imageStates[index].metadataStatus="failed";imageStates[index].metadataNote=error?.message||String(error);updateFailedMetadataControl();$("metadata-ai-status").textContent="Generation failed";log(file.name+": "+(error?.message||error),"error");}
     finally{aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;}
   }
-  async function generateAllMetadata(indicesToProcess=null){
+  function updateFailedMetadataControl(){
+    const failed= imageStates.filter(state=>state.metadataStatus==="failed").length;
+    $("ai-failed-count").textContent=String(failed);
+    $("ai-retry-failed").classList.toggle("hidden",failed===0);
+    $("ai-retry-failed").disabled=aiBatchRunning;
+  }
+  async function generateAllMetadata(indicesToProcess=null,workerLimit=1){
     const requestedIndices=Array.isArray(indicesToProcess)?indicesToProcess.slice():selectedFiles.map((_,index)=>index);
     if(!requestedIndices.length)return;
     const runBatch=async()=>{
@@ -1010,13 +1017,15 @@
           if(position>=total)return;
           const i=indices[position];
           const file=selectedFiles[i];
-          $("metadata-ai-status").textContent="Analysing "+(position+1)+" / "+total+" (up to 3 at once)";
+          $("metadata-ai-status").textContent="Analysing "+(position+1)+" / "+total+" (sequential fallback)";
           try{
             const metadata=await generateMetadataForImage(file,i);
             completed++;
             log((metadata.metadataSource==="openrouter"?"OpenRouter":"Gemini")+" metadata applied to "+file.name+": “"+metadata.title+"” · description "+(metadata.description?"updated":"missing")+" · category "+metadata.category+" ("+(metadata.metadataModel||"model")+")","success");
           }catch(error){
             failed++;
+            imageStates[i].metadataStatus="failed";
+            imageStates[i].metadataNote=error?.message||String(error);
             log("AI metadata failed for "+file.name+": "+(error?.message||error),"error");
           }finally{
             progress(completed+failed,total,"AI metadata "+(completed+failed)+" / "+total+" · "+completed+" ready · "+failed+" failed");
@@ -1025,11 +1034,12 @@
         }
       };
       try{
-        await Promise.all(Array.from({length:Math.min(3,total)},()=>worker()));
+        await Promise.all(Array.from({length:Math.min(Math.max(1,workerLimit),total)},()=>worker()));
         $("metadata-ai-status").textContent=completed+" generated · "+failed+" failed";
-        log("AI metadata batch finished: "+completed+" generated, "+failed+" failed. Failed entries need manual metadata; no placeholder descriptions were generated.",failed?"error":"success");
+        log("AI metadata batch finished: "+completed+" generated, "+failed+" failed. No placeholder metadata was generated.",failed?"error":"success");
+        updateFailedMetadataControl();
       }finally{
-        aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;
+        aiBatchRunning=false;$("ai-generate-current").disabled=false;$("ai-generate-all").disabled=false;updateFailedMetadataControl();
       }
     };
     const queued=aiBatchQueue.then(runBatch,runBatch);
@@ -1038,6 +1048,12 @@
   }
   $("ai-generate-current").addEventListener("click",generateCurrentMetadata);
   $("ai-generate-all").addEventListener("click",generateAllMetadata);
+  $("ai-retry-failed").addEventListener("click",()=>{
+    const failedIndices=imageStates.map((state,index)=>state.metadataStatus==="failed"?index:-1).filter(index=>index>=0);
+    if(!failedIndices.length)return;
+    log("Retrying metadata for "+failedIndices.length+" failed image(s) only. Previously successful metadata will be left unchanged.","info");
+    generateAllMetadata(failedIndices,1);
+  });
 
   $('upload-btn').addEventListener('click', async () => {
     if (!selectedFiles.length) { log('Choose at least one image first.', 'error'); return; }
