@@ -97,7 +97,7 @@
     <section id="dashboard" class="hidden space-y-6">
       <div class="panel rounded-2xl p-5 sm:p-7">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-5">
-          <div><h2 class="text-lg font-black">Publish wallpapers</h2><p class="text-xs text-slate-400 mt-1">Upload PNG, JPG, WEBP or other ImgBB-supported image files. Maximum 3 MB per image on this Vercel upload endpoint.</p></div>
+          <div><h2 class="text-lg font-black">Publish wallpapers</h2><p class="text-xs text-slate-400 mt-1">Upload PNG, JPG, WEBP or other ImgBB-supported image files. Maximum 25 MB per image. Larger files are uploaded securely through the Supabase Edge Function.</p></div>
           <span id="admin-status" class="text-[11px] text-emerald-300 border border-emerald-500/30 bg-emerald-950/30 rounded-full px-3 py-1">Admin authenticated</span>
         </div>
         <div class="grid sm:grid-cols-2 gap-4">
@@ -117,7 +117,7 @@
         <div id="dropzone" class="mt-5 rounded-2xl border-2 border-dashed border-slate-600 bg-slate-950/50 p-8 text-center cursor-pointer hover:border-cyan-400 transition">
           <input id="files" type="file" accept="image/*" multiple class="hidden">
           <div class="text-3xl mb-2">☁️</div><p class="font-bold">Drop images here or click to browse</p>
-          <p class="text-xs text-slate-500 mt-1">Multiple files supported · 3 MB maximum each</p>
+          <p class="text-xs text-slate-500 mt-1">Multiple files supported · 25 MB maximum each</p>
           <p id="file-summary" class="text-xs text-cyan-300 mt-3">No files selected</p>
         </div>
         <div class="flex flex-wrap items-center gap-3 mt-3"><button type="button" id="zip-import-btn" class="rounded-xl border border-emerald-500/50 bg-emerald-950/40 px-4 py-2.5 text-xs font-bold text-emerald-200 hover:bg-emerald-900/50">＋ Import ZIP archive</button><input id="zip-file" type="file" accept=".zip,application/zip" class="hidden"><button type="button" id="bulk-import-btn" class="rounded-xl border border-cyan-500/50 bg-cyan-950/40 px-4 py-2.5 text-xs font-bold text-cyan-200 hover:bg-cyan-900/50">＋ Add / Bulk import images</button><span class="text-[11px] text-slate-500">Select one ZIP archive to extract its images in the browser, or add individual images. Extracted images are queued locally; only the ZIP requires browser file-selection approval.</span><input id="bulk-files" type="file" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.avif,.bmp" multiple class="hidden"></div>
@@ -779,13 +779,13 @@
     for(let i=0;i<entries.length;i++){
       const entry=entries[i];
       const declaredSize=Number(entry._data?.uncompressedSize||0);
-      if(declaredSize>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
+      if(declaredSize>25*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the 25 MB per-image upload limit.","error");continue;}
       declaredBytes+=declaredSize;
       if(declaredBytes>maxExpandedBytes)throw new Error("ZIP contains more than 200 MB of supported extracted content; split it into smaller ZIP files.");
       const blob=await entry.async("blob");
       totalBytes+=blob.size;
       if(totalBytes>maxExpandedBytes)throw new Error("Extracted content exceeds the 200 MB safety limit; split the archive into smaller ZIP files.");
-      if(blob.size>3*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the existing 3 MB per-image upload limit.","error");continue;}
+      if(blob.size>25*1024*1024){skippedLarge++;log(entry.name+" skipped: exceeds the 25 MB per-image upload limit.","error");continue;}
       const ext=(entry.name.match(/\.([^.]+)$/)||[])[1]?.toLowerCase()||"";
       const mime={jpg:"image/jpeg",jpeg:"image/jpeg",png:"image/png",webp:"image/webp",gif:"image/gif",avif:"image/avif",bmp:"image/bmp",tif:"image/tiff",tiff:"image/tiff"}[ext];
       if(!mime)continue;
@@ -793,7 +793,7 @@
       extracted.push(new File([blob],safeName,{type:mime,lastModified:Date.now()}));
       progress(i+1,entries.length,"Extracting "+(i+1)+" / "+entries.length+" images…");
     }
-    if(!extracted.length)throw new Error("No images within the 3 MB per-image limit could be extracted.");
+    if(!extracted.length)throw new Error("No images within the 25 MB per-image limit could be extracted.");
     await setFiles(extracted,true);
     log("ZIP extraction complete: "+extracted.length+" image(s) added to the upload queue from "+(file.size/1024/1024).toFixed(1)+" MB archive"+(skippedLarge?", "+skippedLarge+" oversized image(s) skipped":"")+".","success");
   }
@@ -839,7 +839,7 @@
     ctx.rotate(state.rotation*Math.PI/180);ctx.scale(state.zoom*(state.flipX?-1:1),state.zoom*(state.flipY?-1:1));
     ctx.drawImage(bitmap,-w/2,-h/2,w,h);
     const type=/image\/(png|webp)$/i.test(file.type)?file.type:'image/jpeg',blob=await canvasBlob(c,type);
-    if(blob.size>3*1024*1024)throw new Error('Adjusted image exceeds the 3 MB upload limit. Reduce dimensions or export/compress it before uploading.');
+    if(blob.size>25*1024*1024)throw new Error('Adjusted image exceeds the 25 MB upload limit. Reduce dimensions or export/compress it before uploading.');
     const ext=type==='image/png'?'png':type==='image/webp'?'webp':'jpg';
     return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-adjusted.'+ext,{type});
   }
@@ -897,23 +897,22 @@
   }
 
   async function uploadToImgBB(file, uploadName=file.name) {
-    // Vercel Functions enforce a 4.5 MB request-body limit. Base64 adds overhead,
-    // so keep each source image at 3 MB to leave room for JSON and metadata.
-    if (file.size > 3 * 1024 * 1024) throw new Error(`${file.name} exceeds the 3 MB hosted upload limit. Resize/compress it before uploading.`);
+    const maxUploadBytes = 25 * 1024 * 1024;
+    if (file.size > maxUploadBytes) throw new Error(`${file.name} exceeds the 25 MB hosted upload limit.`);
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session?.access_token) throw new Error('Your admin session has expired. Sign in again.');
+    // Send the original File as multipart data. This avoids base64's 33% size
+    // overhead and removes the old Vercel 4.5 MB request-body bottleneck.
+    const body = new FormData();
+    body.append('file', file, uploadName);
+    body.append('fileName', uploadName);
     const response = await fetch('https://dhrbmkwijciwpzkwexzq.supabase.co/functions/v1/imgbb-upload', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': `Bearer ${session.access_token}`
       },
-      body: JSON.stringify({
-        fileName: uploadName,
-        contentType: file.type || 'application/octet-stream',
-        imageBase64: await fileToBase64(file)
-      })
+      body
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok || !result.success || !result.preview_url || !result.full_url) {
