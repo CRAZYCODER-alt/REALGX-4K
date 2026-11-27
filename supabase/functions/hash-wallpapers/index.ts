@@ -34,7 +34,7 @@ async function withTimeout<T>(ms: number, run: (signal: AbortSignal) => Promise<
 
 // A reliable Content-Length lets us rule out different-sized files without
 // downloading their image bodies. Missing/encoded lengths fall back to hashing.
-async function inspectSize(item: { id: string; url: string }) {
+async function inspectSize(item: { id: string; url: string }): Promise<{ id: string; error?: string; needsHash?: boolean; bytes?: number }> {
   const parsed = approvedUrl(item.url);
   if (!parsed) return { id: item.id, error: "Image URL is not on the approved ImgBB image host." };
   try {
