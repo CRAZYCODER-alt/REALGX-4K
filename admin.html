@@ -210,7 +210,7 @@
       ? selectedFiles.map(f => `${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`).join(' · ')
       : 'No files selected';
   }
-  function titleFromFilename(name){return String(name||"Wallpaper").replace(/\.[^.]+$/,"").replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,c=>c.toUpperCase())||"Untitled Wallpaper";}
+  function titleFromFilename(name){const stem=String(name||"").replace(/\.[^.]+$/,"").trim();if(/^(?:[a-f0-9]{24,}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(stem))return "";return stem.replace(/[-_]+/g," ").replace(/\s+/g," ").trim().replace(/\b\w/g,c=>c.toUpperCase());}
   function defaultImageState(file=null){return {title:file?titleFromFilename(file.name):"",description:"",category:"",rotation:0,flipX:false,flipY:false,zoom:1,x:0,y:0,exifOrientation:1,analysis:null,metadataStatus:"pending",metadataNote:""};}
   function isSupportedImage(file){
     return !!file && (file.type?.startsWith('image/') || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(file.name||''));
@@ -956,11 +956,18 @@
     const {data:{session}}=await supabaseClient.auth.getSession();
     if(!session?.access_token)throw new Error("Your admin session has expired. Sign in again.");
     const analysisImage=await prepareImageForAI(file);
-    const response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
-      method:"POST",
-      headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+session.access_token},
-      body:JSON.stringify({fileName:file.name,contentType:analysisImage.contentType,imageBase64:await fileToBase64(analysisImage.blob),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"})
-    });
+    let response;
+    try{
+      response=await fetch(SUPABASE_URL+"/functions/v1/generate-wallpaper-metadata",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+session.access_token},
+        body:JSON.stringify({fileName:file.name,contentType:analysisImage.contentType,imageBase64:await fileToBase64(analysisImage.blob),openRouterModel:$("openrouter-model")?.value||"openai/gpt-4.1-mini"}),
+        signal:AbortSignal.timeout(45000)
+      });
+    }catch(error){
+      if(error?.name==="TimeoutError")throw new Error("The REALGX AI service timed out while contacting a provider. Please retry when your connection is stable.");
+      throw new Error("Could not reach the REALGX AI service (network or connection failure). Check your internet connection and retry. "+(error?.message||""));
+    }
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.success||!result.metadata)throw new Error(result.error||"All configured cloud AI metadata providers failed (HTTP "+response.status+").");
     const metadata=result.metadata,provider=result.provider||"cloud",modelName=result.model||"";
@@ -1076,6 +1083,15 @@
     progress(0, selectedFiles.length, 'Starting uploads…');
     const filesToPublish=selectedFiles.slice();
     const statesToPublish=imageStates.slice();
+    const typedTitleForPublish=$('title').value.trim();
+    const missingTitleIndex=statesToPublish.findIndex((state,index)=>!(filesToPublish.length===1&&typedTitleForPublish)&&!state.title?.trim()&&!titleFromFilename(filesToPublish[index]?.name));
+    if(missingTitleIndex>=0){
+      $('upload-btn').disabled=false;
+      log('AI could not create a title for '+filesToPublish[missingTitleIndex].name+'. Enter a descriptive title in the editor before publishing; an ID-like filename will not be used as the title.','error');
+      await prepareEditorImage(missingTitleIndex);
+      $('editor-title').focus();
+      return;
+    }
     for (let index=0;index<filesToPublish.length;index++) {
       const file=filesToPublish[index];
       try {
