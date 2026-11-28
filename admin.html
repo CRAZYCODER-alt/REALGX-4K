@@ -261,7 +261,8 @@
     editorRenderToken++;
     $('analysis-status').textContent='Loading selected image…';
     if(additions.length||!imageBitmaps[targetIndex])await prepareEditorImage(targetIndex);
-    if(additions.length)await autoOrientImportedFiles(additions);
+    // Keep import responsive: orientation inference is user-triggered per image,
+    // rather than loading every full-resolution bitmap and model during import.
     $('review-approved').disabled=false;
     if(additions.length){
       log(append?'Added '+additions.length+' image(s). The dropdown now contains all '+selectedFiles.length+' imported images.':'Imported '+selectedFiles.length+' image(s). The dropdown contains the complete image list.','success');
@@ -320,8 +321,13 @@
       }
       if(token!==editorRenderToken)return;
       renderEditor();
-      if(!imageStates[index].analysis?.orientationCheck)await runAutoOrientation(index);
+      // Do not run heavy orientation inference automatically while importing or
+      // switching images. The user can run it with the Check rotation control.
       if(token===editorRenderToken)renderEditor();
+      // Release decoded bitmaps for other queued files to keep memory bounded.
+      imageBitmaps.forEach((otherBitmap,otherIndex)=>{
+        if(otherIndex!==index&&otherBitmap){otherBitmap.close?.();imageBitmaps[otherIndex]=null;}
+      });
     }catch(error){
       if(token===editorRenderToken)$('analysis-status').textContent='Could not preview';
       log(file.name+': '+(error?.message||error),'error');
@@ -1068,13 +1074,18 @@
     $('upload-btn').disabled = true;
     let done = 0, failures = 0;
     progress(0, selectedFiles.length, 'Starting uploads…');
-    for (const file of selectedFiles) {
+    const filesToPublish=selectedFiles.slice();
+    const statesToPublish=imageStates.slice();
+    for (let index=0;index<filesToPublish.length;index++) {
+      const file=filesToPublish[index];
       try {
         log(`Uploading ${file.name}…`);
-        const state = imageStates[done];
-        const originalUrls = await uploadToImgBB(file, file.name);
-        const adjustedFile = await getAdjustedFile(file, done);
-        const urls = adjustedFile === file ? originalUrls : await uploadToImgBB(adjustedFile, adjustedFile.name);
+        const state = statesToPublish[index];
+        // Render adjustments first. Unadjusted files are uploaded only once.
+        const adjustedFile = await getAdjustedFile(file, index);
+        const uploadFile = adjustedFile;
+        const urls = await uploadToImgBB(uploadFile, uploadFile.name);
+        const originalUrls = adjustedFile===file ? urls : await uploadToImgBB(file,file.name);
         const typedTitle = $('title').value.trim();
         const title = (selectedFiles.length === 1 && typedTitle) ? typedTitle : (state.title?.trim() || titleFromFilename(file.name));
         const description = state.description?.trim() || $('description').value.trim();
